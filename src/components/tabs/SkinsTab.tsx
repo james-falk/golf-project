@@ -268,27 +268,244 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
       </div>
 
       {/* Scorecard */}
-      <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 overflow-x-auto">
+      <div className="bg-white rounded-lg shadow-md p-3 sm:p-6">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">The Tribute Skins Calculator</h2>
         <div className="text-xs sm:text-sm text-gray-600 mb-4">
           Showing {players.length} players • Group A: 0 strokes, B: 6 strokes, C: 12 strokes, D: 18 strokes
         </div>
-        <div className="min-w-full">
-          <div className="space-y-8">
-            {players.map(player => (
-              <div key={player.id} className="border border-gray-400 rounded-lg p-4">
-                <div className="mb-4">
-                  <h3 className="font-semibold text-gray-900 text-lg">{player.name}</h3>
-                  <div className="text-sm text-gray-600">
-                                            {player.group} Player ({player.group === 'A' ? '0' : player.group === 'B' ? '6' : player.group === 'C' ? '12' : '18'} strokes) • 
-                    Total Score: {scores[player.id]?.reduce((sum, score) => sum + score.score, 0) || 0}
+        
+        <div className="space-y-6">
+          {players.map(player => (
+            <div key={player.id} className="border border-gray-400 rounded-lg p-3 sm:p-4">
+              <div className="mb-4">
+                <h3 className="font-semibold text-gray-900 text-base sm:text-lg">{player.name}</h3>
+                <div className="text-xs sm:text-sm text-gray-600">
+                  {player.group} Player ({player.group === 'A' ? '0' : player.group === 'B' ? '6' : player.group === 'C' ? '12' : '18'} strokes) • 
+                  Total Score: {scores[player.id]?.reduce((sum, score) => sum + score.score, 0) || 0}
+                </div>
+              </div>
+              
+              {/* Mobile Layout - Stack holes vertically */}
+              <div className="block sm:hidden space-y-4">
+                {/* Front 9 */}
+                <div>
+                  <h4 className="text-sm font-bold text-black bg-gray-100 px-3 py-2 rounded mb-3">Front Nine</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    {demoCourse.holes.slice(0, 9).map(hole => {
+                      const playerScore = scores[player.id]?.find(s => s.hole === hole.number);
+                      const netScore = playerScore ? calculateNetScore(playerScore.score, hole.par, player.group, hole.number) : null;
+                      const strokesOnHole = getStrokesOnHole(player.group, hole.number);
+                      
+                      return (
+                        <div key={hole.number} className={`border rounded-lg p-3 ${
+                          strokesOnHole > 0 ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-300'
+                        }`}>
+                          <div className="text-center mb-2">
+                            <div className={`text-sm font-bold ${strokesOnHole > 0 ? 'text-yellow-900' : 'text-gray-700'}`}>
+                              Hole {hole.number}
+                            </div>
+                            <div className={`text-xs ${strokesOnHole > 0 ? 'text-yellow-800' : 'text-gray-600'}`}>
+                              Par {hole.par} • HCP {hole.handicap}
+                              {strokesOnHole > 0 && <span className="ml-1 text-blue-600">({strokesOnHole}★)</span>}
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col items-center space-y-2">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={playerScore?.score || ''}
+                              disabled={isReadOnly}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^[1-9]$/.test(value)) {
+                                  const numValue = Number(value);
+                                  if (numValue >= 1 && numValue <= 9) {
+                                    updateScore(player.id, hole.number, numValue);
+                                    setTimeout(() => {
+                                      const currentInput = e.target as HTMLInputElement;
+                                      const allInputs = Array.from(document.querySelectorAll('input[type="text"]')) as HTMLInputElement[];
+                                      const currentIndex = allInputs.indexOf(currentInput);
+                                      const nextInput = allInputs[currentIndex + 1];
+                                      if (nextInput) {
+                                        nextInput.focus();
+                                        nextInput.select();
+                                      }
+                                    }, 50);
+                                  }
+                                } else if (value === '') {
+                                  updateScore(player.id, hole.number, 0);
+                                } else if (/^\d{2}$/.test(value)) {
+                                  const numValue = Number(value);
+                                  if (numValue >= 10 && numValue <= 12) {
+                                    updateScore(player.id, hole.number, numValue);
+                                    setTimeout(() => {
+                                      const currentInput = e.target as HTMLInputElement;
+                                      const allInputs = Array.from(document.querySelectorAll('input[type="text"]')) as HTMLInputElement[];
+                                      const currentIndex = allInputs.indexOf(currentInput);
+                                      const nextInput = allInputs[currentIndex + 1];
+                                      if (nextInput) {
+                                        nextInput.focus();
+                                        nextInput.select();
+                                      }
+                                    }, 50);
+                                  }
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if ([8, 9, 27, 13, 37, 38, 39, 40, 46].includes(e.keyCode)) {
+                                  return;
+                                }
+                                if ((e.keyCode === 65 || e.keyCode === 67 || e.keyCode === 86 || e.keyCode === 88) && e.ctrlKey) {
+                                  return;
+                                }
+                                const isMainKeyboardNumber = e.keyCode >= 49 && e.keyCode <= 57;
+                                const isNumpadNumber = e.keyCode >= 97 && e.keyCode <= 105;
+                                if (!isMainKeyboardNumber && !isNumpadNumber) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              className="w-16 h-12 text-center text-lg font-bold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                              placeholder=""
+                              maxLength={2}
+                            />
+                            
+                            {playerScore?.score && (
+                              <button
+                                onClick={() => updateScore(player.id, hole.number, 0)}
+                                className="text-xs text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded"
+                                title="Clear score"
+                              >
+                                Clear
+                              </button>
+                            )}
+                            
+                            {netScore !== null && playerScore?.score && playerScore.score > 0 && (
+                              <div className="text-xs text-center text-gray-700">
+                                <div className="font-semibold">Net: {netScore}</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 
+                {/* Back 9 */}
+                <div>
+                  <h4 className="text-sm font-bold text-black bg-gray-100 px-3 py-2 rounded mb-3">Back Nine</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    {demoCourse.holes.slice(9, 18).map(hole => {
+                      const playerScore = scores[player.id]?.find(s => s.hole === hole.number);
+                      const netScore = playerScore ? calculateNetScore(playerScore.score, hole.par, player.group, hole.number) : null;
+                      const strokesOnHole = getStrokesOnHole(player.group, hole.number);
+                      
+                      return (
+                        <div key={hole.number} className={`border rounded-lg p-3 ${
+                          strokesOnHole > 0 ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-300'
+                        }`}>
+                          <div className="text-center mb-2">
+                            <div className={`text-sm font-bold ${strokesOnHole > 0 ? 'text-yellow-900' : 'text-gray-700'}`}>
+                              Hole {hole.number}
+                            </div>
+                            <div className={`text-xs ${strokesOnHole > 0 ? 'text-yellow-800' : 'text-gray-600'}`}>
+                              Par {hole.par} • HCP {hole.handicap}
+                              {strokesOnHole > 0 && <span className="ml-1 text-blue-600">({strokesOnHole}★)</span>}
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col items-center space-y-2">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={playerScore?.score || ''}
+                              disabled={isReadOnly}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^[1-9]$/.test(value)) {
+                                  const numValue = Number(value);
+                                  if (numValue >= 1 && numValue <= 9) {
+                                    updateScore(player.id, hole.number, numValue);
+                                    setTimeout(() => {
+                                      const currentInput = e.target as HTMLInputElement;
+                                      const allInputs = Array.from(document.querySelectorAll('input[type="text"]')) as HTMLInputElement[];
+                                      const currentIndex = allInputs.indexOf(currentInput);
+                                      const nextInput = allInputs[currentIndex + 1];
+                                      if (nextInput) {
+                                        nextInput.focus();
+                                        nextInput.select();
+                                      }
+                                    }, 50);
+                                  }
+                                } else if (value === '') {
+                                  updateScore(player.id, hole.number, 0);
+                                } else if (/^\d{2}$/.test(value)) {
+                                  const numValue = Number(value);
+                                  if (numValue >= 10 && numValue <= 12) {
+                                    updateScore(player.id, hole.number, numValue);
+                                    setTimeout(() => {
+                                      const currentInput = e.target as HTMLInputElement;
+                                      const allInputs = Array.from(document.querySelectorAll('input[type="text"]')) as HTMLInputElement[];
+                                      const currentIndex = allInputs.indexOf(currentInput);
+                                      const nextInput = allInputs[currentIndex + 1];
+                                      if (nextInput) {
+                                        nextInput.focus();
+                                        nextInput.select();
+                                      }
+                                    }, 50);
+                                  }
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if ([8, 9, 27, 13, 37, 38, 39, 40, 46].includes(e.keyCode)) {
+                                  return;
+                                }
+                                if ((e.keyCode === 65 || e.keyCode === 67 || e.keyCode === 86 || e.keyCode === 88) && e.ctrlKey) {
+                                  return;
+                                }
+                                const isMainKeyboardNumber = e.keyCode >= 49 && e.keyCode <= 57;
+                                const isNumpadNumber = e.keyCode >= 97 && e.keyCode <= 105;
+                                if (!isMainKeyboardNumber && !isNumpadNumber) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              className="w-16 h-12 text-center text-lg font-bold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                              placeholder=""
+                              maxLength={2}
+                            />
+                            
+                            {playerScore?.score && (
+                              <button
+                                onClick={() => updateScore(player.id, hole.number, 0)}
+                                className="text-xs text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded"
+                                title="Clear score"
+                              >
+                                Clear
+                              </button>
+                            )}
+                            
+                            {netScore !== null && playerScore?.score && playerScore.score > 0 && (
+                              <div className="text-xs text-center text-gray-700">
+                                <div className="font-semibold">Net: {netScore}</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Desktop Layout - Keep original table format */}
+              <div className="hidden sm:block">
                 {/* Front 9 */}
                 <div className="mb-6">
                   <h4 className="text-sm font-bold text-black bg-gray-100 px-3 py-2 rounded mb-2">Front Nine</h4>
-                  <div className="grid grid-cols-10 gap-0 border border-gray-200 rounded">
+                  <div className="grid grid-cols-10 gap-0 border border-gray-200 rounded overflow-x-auto">
                     <div className="text-sm font-bold underline text-gray-800 text-center py-2 border-b border-r border-gray-200 bg-gray-50">Hole</div>
                     {demoCourse.holes.slice(0, 9).map((hole, index) => {
                       const strokesOnHole = getStrokesOnHole(player.group, hole.number);
@@ -299,7 +516,6 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
                             : 'bg-gray-50 text-gray-800'
                         }`}>
                           {hole.number}
-
                         </div>
                       );
                     })}
@@ -401,7 +617,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
                                 e.preventDefault();
                               }
                             }}
-                            className="w-14 sm:w-12 px-2 py-2 sm:py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-black font-semibold"
+                            className="w-12 px-2 py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-black font-semibold"
                             placeholder=""
                             maxLength={2}
                           />
@@ -546,7 +762,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
                                 e.preventDefault();
                               }
                             }}
-                            className="w-14 sm:w-12 px-2 py-2 sm:py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-black font-semibold"
+                            className="w-12 px-2 py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-black font-semibold"
                             placeholder=""
                             maxLength={2}
                           />
@@ -575,8 +791,8 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
 
