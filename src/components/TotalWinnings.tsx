@@ -71,7 +71,7 @@ const TotalWinnings: React.FC<TotalWinningsProps> = ({ tournamentData }) => {
               </span>
             </div>
             <span className="text-sm font-bold text-green-600">
-              ${player.totalWinnings.toFixed(2)}
+              ${Math.round(player.totalWinnings)}
             </span>
           </div>
         ))}

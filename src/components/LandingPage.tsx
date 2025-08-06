@@ -31,12 +31,26 @@ const LandingPage: React.FC<LandingPageProps> = ({ onCodeSubmit }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        backgroundImage: 'url("/hills-background.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
       <div className="max-w-md w-full">
         <div className="bg-white rounded-xl shadow-2xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-6xl mb-4">🏌️</div>
+            <div className="mb-4">
+              <img 
+                src="/landing-page-image.png" 
+                alt="Golf Tournament Logo" 
+                className="w-40 h-40 mx-auto object-contain"
+              />
+            </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               East Coast Big Playas 2.0
             </h1>

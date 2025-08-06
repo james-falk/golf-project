@@ -254,7 +254,7 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
                           <div className="text-lg font-bold text-green-600 mt-1">
                             {playerCount > 0 ? (
                               <>
-                                ${perPlayerWinnings.toFixed(2)} per player
+                                ${Math.round(perPlayerWinnings)} per player
                                 <div className="text-sm text-gray-600 font-normal">
                                   (${totalWinnings} ÷ {playerCount} player{playerCount !== 1 ? 's' : ''})
                                 </div>
