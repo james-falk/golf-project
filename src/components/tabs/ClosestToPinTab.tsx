@@ -5,7 +5,7 @@ import { Player, ClosestToPinHole, RoundData } from '@/types/golf';
 
 interface ClosestToPinTabProps {
   roundData: RoundData;
-  updateRoundData?: (updater: (round: RoundData) => RoundData) => void;
+  updateRoundData: (updater: (round: RoundData) => RoundData) => void;
   isReadOnly?: boolean;
 }
 
@@ -15,7 +15,7 @@ const ClosestToPinTab: React.FC<ClosestToPinTabProps> = ({ roundData, updateRoun
   const totalPrizePool = roundData.closestToPinGame.totalPrizePool;
 
   const updateHoleWinner = (holeNumber: number, winnerId: string) => {
-    if (isReadOnly || !updateRoundData) return;
+    if (isReadOnly) return;
     
     updateRoundData(round => ({
       ...round,
@@ -31,7 +31,7 @@ const ClosestToPinTab: React.FC<ClosestToPinTabProps> = ({ roundData, updateRoun
   };
 
   const clearHoleWinner = (holeNumber: number) => {
-    if (isReadOnly || !updateRoundData) return;
+    if (isReadOnly) return;
     
     updateRoundData(round => ({
       ...round,

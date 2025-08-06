@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { ScrambleTeam, ScrambleScore, RoundData } from '@/types/golf';
 import { getTeamPlayerCount as utilGetTeamPlayerCount, calculatePerPlayerWinnings as utilCalculatePerPlayerWinnings } from '@/utils/scrambleUtils';
 import { demoPlayers, demoCourse } from '@/data/demoData';
 
 interface ScrambleTabProps {
   roundData: RoundData;
-  updateRoundData?: (updater: (round: RoundData) => RoundData) => void;
+  updateRoundData: (updater: (round: RoundData) => RoundData) => void;
   isReadOnly?: boolean;
 }
 
@@ -18,7 +18,6 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
 
   // Ensure exactly 5 teams with correct structure
   useEffect(() => {
-    if (!updateRoundData) return; // Don't initialize teams if we can't update data
     
     if (teams.length !== 5 || teams.some(team => team.players.length !== 4)) {
       const initialTeams: ScrambleTeam[] = Array.from({ length: 5 }, (_, i) => ({
@@ -37,9 +36,10 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
     }
   }, [teams.length, updateRoundData]);
 
-  const calculateResults = useCallback(() => {
-    if (!updateRoundData) return; // Don't calculate results if we can't update data
+  // Update results in data when teams or scores change
+  useEffect(() => {
     
+    // Calculate team results
     const teamResults: ScrambleScore[] = teams.map(team => {
       const teamScores = scores[team.id] || [];
       const totalScore = teamScores.reduce((sum, score) => sum + score.score, 0);
@@ -72,13 +72,8 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
     }));
   }, [teams, scores, updateRoundData]);
 
-  // Calculate team totals and rankings
-  useEffect(() => {
-    calculateResults();
-  }, [calculateResults]);
-
   const updateTeamPlayer = (teamId: string, playerIndex: number, playerId: string | null) => {
-    if (isReadOnly || !updateRoundData) return;
+    if (isReadOnly) return;
     
     updateRoundData(round => ({
       ...round,
@@ -97,7 +92,7 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
   };
 
   const updateTeamName = (teamId: string, newName: string) => {
-    if (isReadOnly || !updateRoundData) return;
+    if (isReadOnly) return;
     
     updateRoundData(round => ({
       ...round,
@@ -113,7 +108,7 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
   };
 
   const updateTeamTotalScore = (teamId: string, totalScore: number) => {
-    if (isReadOnly || !updateRoundData) return;
+    if (isReadOnly) return;
     
     updateRoundData(round => {
       const teamScores = totalScore > 0 ? [{ hole: 1, score: totalScore, par: 72 }] : [];

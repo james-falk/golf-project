@@ -1067,7 +1067,7 @@
             "par": 3,
             "isActive": true,
             "prize": 62.5,
-            "winner": "18"
+            "winner": "2"
           },
           {
             "hole": 13,
@@ -1092,7 +1092,7 @@
             "id": "team-1",
             "name": "",
             "players": [
-              null,
+              "3",
               null,
               null,
               null
