@@ -37,11 +37,6 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
     }
   }, [teams.length, updateRoundData]);
 
-  // Calculate team totals and rankings
-  useEffect(() => {
-    calculateResults();
-  }, [calculateResults]);
-
   const calculateResults = useCallback(() => {
     if (!updateRoundData) return; // Don't calculate results if we can't update data
     
@@ -76,6 +71,11 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
       }
     }));
   }, [teams, scores, updateRoundData]);
+
+  // Calculate team totals and rankings
+  useEffect(() => {
+    calculateResults();
+  }, [calculateResults]);
 
   const updateTeamPlayer = (teamId: string, playerIndex: number, playerId: string | null) => {
     if (isReadOnly || !updateRoundData) return;
