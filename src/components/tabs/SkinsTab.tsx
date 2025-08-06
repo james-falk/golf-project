@@ -16,38 +16,6 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
   const potPerHole = roundData.skinsGame.potPerHole;
   const skinResults = roundData.skinsGame.skinResults;
 
-  // Calculate net scores and skins
-  useEffect(() => {
-    calculateSkins();
-  }, [calculateSkins]);
-
-  // Helper function to check if a player gets a stroke on a specific hole
-  const getStrokesOnHole = (playerGroup: 'A' | 'B' | 'C' | 'D', holeNumber: number): number => {
-    const holeData = demoCourse.holes.find(h => h.number === holeNumber);
-    if (!holeData || !holeData.handicap) return 0;
-
-    let totalStrokes = 0;
-    switch (playerGroup) {
-      case 'A': totalStrokes = 0; break;
-      case 'B': totalStrokes = 6; break;
-      case 'C': totalStrokes = 12; break;
-      case 'D': totalStrokes = 18; break;
-    }
-
-    if (totalStrokes === 0) return 0;
-
-    // Each full 18 strokes gives 1 stroke on every hole
-    let strokesOnHole = Math.floor(totalStrokes / 18);
-    
-    // Remaining strokes go to hardest holes first (lowest handicap rating)
-    const remainingStrokes = totalStrokes % 18;
-    if (remainingStrokes >= holeData.handicap) {
-      strokesOnHole += 1;
-    }
-    
-    return strokesOnHole;
-  };
-
   const calculateNetScore = (score: number, par: number, playerGroup: 'A' | 'B' | 'C' | 'D', holeNumber: number): number => {
     // Fixed strokes per group system
     const holeData = demoCourse.holes.find(h => h.number === holeNumber);
@@ -146,6 +114,42 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
       }
     }));
   }, [players, scores, roundData.skinsGame.totalPot, updateRoundData]);
+
+  // Calculate net scores and skins
+  useEffect(() => {
+    calculateSkins();
+  }, [calculateSkins]);
+
+  // Helper function to check if a player gets a stroke on a specific hole
+  const getStrokesOnHole = (playerGroup: 'A' | 'B' | 'C' | 'D', holeNumber: number): number => {
+    const holeData = demoCourse.holes.find(h => h.number === holeNumber);
+    if (!holeData || !holeData.handicap) return 0;
+
+    let totalStrokes = 0;
+    switch (playerGroup) {
+      case 'A': totalStrokes = 0; break;
+      case 'B': totalStrokes = 6; break;
+      case 'C': totalStrokes = 12; break;
+      case 'D': totalStrokes = 18; break;
+    }
+
+    if (totalStrokes === 0) return 0;
+
+    // Each full 18 strokes gives 1 stroke on every hole
+    let strokesOnHole = Math.floor(totalStrokes / 18);
+    
+    // Remaining strokes go to hardest holes first (lowest handicap rating)
+    const remainingStrokes = totalStrokes % 18;
+    if (remainingStrokes >= holeData.handicap) {
+      strokesOnHole += 1;
+    }
+    
+    return strokesOnHole;
+  };
+
+
+
+
 
   const updateScore = (playerId: string, hole: number, newScore: number) => {
     if (isReadOnly || !updateRoundData) return;
