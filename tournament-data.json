@@ -804,9 +804,143 @@
             "handicap": 0
           }
         ],
-        "scores": {},
-        "skinResults": [],
-        "potPerHole": 0,
+        "scores": {
+          "1": [
+            {
+              "hole": 1,
+              "score": 5,
+              "par": 4
+            },
+            {
+              "hole": 2,
+              "score": 4,
+              "par": 4
+            },
+            {
+              "hole": 3,
+              "score": 5,
+              "par": 4
+            },
+            {
+              "hole": 4,
+              "score": 5,
+              "par": 5
+            },
+            {
+              "hole": 5,
+              "score": 5,
+              "par": 4
+            },
+            {
+              "hole": 6,
+              "score": 5,
+              "par": 3
+            },
+            {
+              "hole": 7,
+              "score": 5,
+              "par": 5
+            },
+            {
+              "hole": 8,
+              "score": 5,
+              "par": 4
+            },
+            {
+              "hole": 9,
+              "score": 5,
+              "par": 3
+            },
+            {
+              "hole": 10,
+              "score": 5,
+              "par": 4
+            }
+          ]
+        },
+        "skinResults": [
+          {
+            "hole": 1,
+            "score": 5,
+            "par": 4,
+            "netScore": 5,
+            "pot": 36,
+            "winner": "1"
+          },
+          {
+            "hole": 2,
+            "score": 4,
+            "par": 4,
+            "netScore": 4,
+            "pot": 36,
+            "winner": "1"
+          },
+          {
+            "hole": 3,
+            "score": 5,
+            "par": 4,
+            "netScore": 5,
+            "pot": 36,
+            "winner": "1"
+          },
+          {
+            "hole": 4,
+            "score": 5,
+            "par": 5,
+            "netScore": 5,
+            "pot": 36,
+            "winner": "1"
+          },
+          {
+            "hole": 5,
+            "score": 5,
+            "par": 4,
+            "netScore": 5,
+            "pot": 36,
+            "winner": "1"
+          },
+          {
+            "hole": 6,
+            "score": 5,
+            "par": 3,
+            "netScore": 5,
+            "pot": 36,
+            "winner": "1"
+          },
+          {
+            "hole": 7,
+            "score": 5,
+            "par": 5,
+            "netScore": 5,
+            "pot": 36,
+            "winner": "1"
+          },
+          {
+            "hole": 8,
+            "score": 5,
+            "par": 4,
+            "netScore": 5,
+            "pot": 36,
+            "winner": "1"
+          },
+          {
+            "hole": 9,
+            "score": 5,
+            "par": 3,
+            "netScore": 5,
+            "pot": 36,
+            "winner": "1"
+          },
+          {
+            "hole": 10,
+            "score": 5,
+            "par": 4,
+            "netScore": 5,
+            "pot": 36,
+            "winner": "1"
+          }
+        ],
+        "potPerHole": 36,
         "totalPot": 360
       },
       "closestToPinGame": {

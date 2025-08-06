@@ -1,5 +1,6 @@
 'use client';
 
+// Auto-deployment test - trigger fresh Vercel build
 import React from 'react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import LandingPage from '@/components/LandingPage';
