@@ -31,6 +31,8 @@ const ClosestToPinTab: React.FC<ClosestToPinTabProps> = ({ roundData, updateRoun
   };
 
   const clearHoleWinner = (holeNumber: number) => {
+    if (isReadOnly || !updateRoundData) return;
+    
     updateRoundData(round => ({
       ...round,
       closestToPinGame: {
