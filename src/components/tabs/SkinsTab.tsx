@@ -306,7 +306,6 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
                             </div>
                             <div className={`text-xs ${strokesOnHole > 0 ? 'text-yellow-800' : 'text-gray-600'}`}>
                               Par {hole.par} • HCP {hole.handicap}
-                              {strokesOnHole > 0 && <span className="ml-1 text-blue-600">({strokesOnHole}★)</span>}
                             </div>
                           </div>
                           
@@ -412,7 +411,6 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
                             </div>
                             <div className={`text-xs ${strokesOnHole > 0 ? 'text-yellow-800' : 'text-gray-600'}`}>
                               Par {hole.par} • HCP {hole.handicap}
-                              {strokesOnHole > 0 && <span className="ml-1 text-blue-600">({strokesOnHole}★)</span>}
                             </div>
                           </div>
                           

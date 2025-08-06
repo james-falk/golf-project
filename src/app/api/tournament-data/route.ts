@@ -1,34 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TournamentData } from '@/types/golf';
 import { initialTournamentData } from '@/data/demoData';
-import fs from 'fs';
-import path from 'path';
+import { kv } from '@vercel/kv';
+import { createClient } from 'redis';
 
-const DATA_FILE = path.join(process.cwd(), 'tournament-data.json');
+const TOURNAMENT_DATA_KEY = 'golf-tournament-data';
 
-// Ensure data file exists with initial data
-function ensureDataFile() {
-  try {
-    if (!fs.existsSync(DATA_FILE)) {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(initialTournamentData, null, 2));
-    }
-  } catch (error) {
-    console.error('Error ensuring data file exists:', error);
-  }
+// Fallback in-memory storage when neither KV nor Redis is available
+let fallbackCache: TournamentData = initialTournamentData;
+
+// Check if Vercel KV is properly configured
+function isKVAvailable(): boolean {
+  return !!(process.env.KV_URL && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+}
+
+// Check if Redis URL is available
+function isRedisAvailable(): boolean {
+  return !!process.env.REDIS_URL;
+}
+
+// Create Redis client if available
+let redisClient: ReturnType<typeof createClient> | null = null;
+if (isRedisAvailable()) {
+  redisClient = createClient({
+    url: process.env.REDIS_URL
+  });
 }
 
 // GET - Load tournament data
 export async function GET() {
   try {
-    ensureDataFile();
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    const tournamentData = JSON.parse(data) as TournamentData;
-    
-    return NextResponse.json(tournamentData);
+    if (isKVAvailable()) {
+      console.log('Loading tournament data from Vercel KV...');
+      
+      // Try to get data from KV storage
+      const storedData = await kv.get(TOURNAMENT_DATA_KEY);
+      
+      if (storedData) {
+        console.log('Tournament data found in KV storage');
+        return NextResponse.json(storedData as TournamentData);
+      } else {
+        console.log('No data found in KV, initializing with default data');
+        // Initialize KV with default data
+        await kv.set(TOURNAMENT_DATA_KEY, initialTournamentData);
+        return NextResponse.json(initialTournamentData);
+      }
+    } else if (isRedisAvailable() && redisClient) {
+      console.log('Loading tournament data from Redis...');
+      
+      // Connect to Redis if not connected
+      if (!redisClient.isOpen) {
+        await redisClient.connect();
+      }
+      
+      // Try to get data from Redis
+      const storedData = await redisClient.get(TOURNAMENT_DATA_KEY);
+      
+      if (storedData) {
+        console.log('Tournament data found in Redis');
+        return NextResponse.json(JSON.parse(storedData) as TournamentData);
+      } else {
+        console.log('No data found in Redis, initializing with default data');
+        // Initialize Redis with default data
+        await redisClient.set(TOURNAMENT_DATA_KEY, JSON.stringify(initialTournamentData));
+        return NextResponse.json(initialTournamentData);
+      }
+    } else {
+      console.log('Neither KV nor Redis available, using fallback cache');
+      return NextResponse.json(fallbackCache);
+    }
   } catch (error) {
     console.error('Error loading tournament data:', error);
-    // Return initial data if there's an error reading the file
-    return NextResponse.json(initialTournamentData);
+    // Return fallback cache if there's an error
+    return NextResponse.json(fallbackCache);
   }
 }
 
@@ -38,8 +82,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { data, userRole } = body;
     
+    console.log('Attempting to save data for user role:', userRole);
+    
     // Check if user has admin privileges
     if (userRole !== 'admin') {
+      console.log('Unauthorized save attempt');
       return NextResponse.json(
         { error: 'Unauthorized. Admin access required.' },
         { status: 403 }
@@ -48,16 +95,29 @@ export async function POST(request: NextRequest) {
     
     // Validate data structure
     if (!data || !data.rounds || !Array.isArray(data.rounds)) {
+      console.log('Invalid data structure received');
       return NextResponse.json(
         { error: 'Invalid data structure' },
         { status: 400 }
       );
     }
     
-    ensureDataFile();
-    
-    // Save data to file
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    if (isKVAvailable()) {
+      // Save data to Vercel KV (persistent storage)
+      await kv.set(TOURNAMENT_DATA_KEY, data);
+      console.log('Tournament data saved successfully to Vercel KV');
+    } else if (isRedisAvailable() && redisClient) {
+      // Save data to Redis (persistent storage)
+      if (!redisClient.isOpen) {
+        await redisClient.connect();
+      }
+      await redisClient.set(TOURNAMENT_DATA_KEY, JSON.stringify(data));
+      console.log('Tournament data saved successfully to Redis');
+    } else {
+      // Save to fallback cache when neither KV nor Redis is available
+      fallbackCache = data;
+      console.log('Tournament data saved to fallback cache (no persistent storage configured)');
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {
