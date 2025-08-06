@@ -631,11 +631,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
                           {netScore !== null && playerScore?.score && playerScore.score > 0 && (
                             <div className="text-sm font-bold text-gray-800">
                               Net: {netScore}
-                              {strokesOnHole > 0 && (
-                                <div className="text-sm font-bold text-blue-600">
-                                  ({strokesOnHole}★)
-                                </div>
-                              )}
+
                             </div>
                           )}
                         </div>
@@ -776,11 +772,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
                           {netScore !== null && playerScore?.score && playerScore.score > 0 && (
                             <div className="text-sm font-bold text-gray-800">
                               Net: {netScore}
-                              {strokesOnHole > 0 && (
-                                <div className="text-sm font-bold text-blue-600">
-                                  ({strokesOnHole}★)
-                                </div>
-                              )}
+
                             </div>
                           )}
                         </div>

@@ -184,9 +184,6 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
         <div className={`${false ? 'p-3' : 'p-3 sm:p-6'}`}>
           <div className={`${false ? 'mb-3' : 'mb-3 sm:mb-6'}`}>
             <h3 className={`font-semibold text-gray-900 ${false ? 'text-lg' : 'text-lg sm:text-xl'}`}>{currentData.title}</h3>
-            <p className={`text-gray-600 mt-1 ${false ? 'text-xs' : 'text-xs sm:text-sm'}`}>
-              East Coast Big Playas 2.0 • Otsego Club, Gaylord, MI • Generated {new Date().toLocaleDateString()}
-            </p>
           </div>
           
           {/* Leaderboard */}

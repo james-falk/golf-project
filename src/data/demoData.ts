@@ -114,7 +114,7 @@ export const createEmptyRound = (id: string, name: string, day: string): RoundDa
     scores: {},
     skinResults: [],
     potPerHole: 20,
-    totalPot: 360,
+    totalPot: 280,
   },
   closestToPinGame: {
     players: demoPlayers,

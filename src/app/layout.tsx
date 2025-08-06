@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "East Coast Big Playas 2.0",
   description: "Track skins, closest to pin, and scramble games for East Coast Big Playas 2.0",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

@@ -1,0 +1,15 @@
+warning: in the working copy of 'src/app/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/src/app/layout.tsx b/src/app/layout.tsx[m
+[1mindex 22db871..aebe62a 100644[m
+[1m--- a/src/app/layout.tsx[m
+[1m+++ b/src/app/layout.tsx[m
+[36m@@ -15,6 +15,9 @@[m [mconst geistMono = Geist_Mono({[m
+ export const metadata: Metadata = {[m
+   title: "East Coast Big Playas 2.0",[m
+   description: "Track skins, closest to pin, and scramble games for East Coast Big Playas 2.0",[m
+[32m+[m[32m  icons: {[m
+[32m+[m[32m    icon: "/icon.svg",[m
+[32m+[m[32m  },[m
+ };[m
+ [m
+ export default function RootLayout({[m

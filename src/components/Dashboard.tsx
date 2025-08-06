@@ -192,7 +192,7 @@ const Dashboard = () => {
                   🏌️ East Coast Big Playas 2.0
                 </h1>
                 <p className="text-xs sm:text-base text-gray-600">
-                  Otsego Club, Gaylord, MI • {currentRound.day} - {
+                  Otsego Club • {
                     activeTab === 'skins' ? 'Skins' :
                     activeTab === 'closest-pin' ? 'Closest to Pin' :
                     activeTab === 'scramble' ? 'Scramble' :
