@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { GameTab, RoundTab, TournamentData } from '@/types/golf';
+import { GameTab, RoundTab, TournamentData, RoundData } from '@/types/golf';
 import { loadTournamentData, saveTournamentData } from '@/utils/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import SkinsTab from './tabs/SkinsTab';
@@ -123,7 +123,7 @@ const Dashboard = () => {
 
   const renderTabContent = () => {
     const isReadOnly = userRole !== 'admin';
-    const updateRoundData = isReadOnly ? undefined : (updater: any) => 
+    const updateRoundData = isReadOnly ? undefined : (updater: (round: RoundData) => RoundData) => 
       updateTournamentData(tournament => ({
         ...tournament,
         rounds: tournament.rounds.map(r => 

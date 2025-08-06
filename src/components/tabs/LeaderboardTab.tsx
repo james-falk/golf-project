@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Player, RoundData, TournamentData } from '@/types/golf';
 import { calculatePlayerScrambleWinnings } from '@/utils/scrambleUtils';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 
 interface LeaderboardTabProps {
   tournamentData: TournamentData;

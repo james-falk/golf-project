@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { ScrambleTeam, HoleScore, ScrambleScore, RoundData } from '@/types/golf';
+import React, { useEffect, useCallback } from 'react';
+import { ScrambleTeam, ScrambleScore, RoundData } from '@/types/golf';
 import { getTeamPlayerCount as utilGetTeamPlayerCount, calculatePerPlayerWinnings as utilCalculatePerPlayerWinnings } from '@/utils/scrambleUtils';
 import { demoPlayers, demoCourse } from '@/data/demoData';
 
@@ -40,9 +40,9 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
   // Calculate team totals and rankings
   useEffect(() => {
     calculateResults();
-  }, [scores, teams]);
+  }, [calculateResults]);
 
-  const calculateResults = () => {
+  const calculateResults = useCallback(() => {
     if (!updateRoundData) return; // Don't calculate results if we can't update data
     
     const teamResults: ScrambleScore[] = teams.map(team => {
@@ -75,7 +75,7 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
         results: teamResults
       }
     }));
-  };
+  }, [teams, scores, updateRoundData]);
 
   const updateTeamPlayer = (teamId: string, playerIndex: number, playerId: string | null) => {
     if (isReadOnly || !updateRoundData) return;

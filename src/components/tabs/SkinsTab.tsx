@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { Player, HoleScore, SkinScore, RoundData } from '@/types/golf';
+import React, { useEffect, useCallback } from 'react';
+import { Player, SkinScore, RoundData } from '@/types/golf';
 import { demoCourse } from '@/data/demoData';
 
 interface SkinsTabProps {
@@ -19,7 +19,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
   // Calculate net scores and skins
   useEffect(() => {
     calculateSkins();
-  }, [scores, players, potPerHole]);
+  }, [calculateSkins]);
 
   // Helper function to check if a player gets a stroke on a specific hole
   const getStrokesOnHole = (playerGroup: 'A' | 'B' | 'C' | 'D', holeNumber: number): number => {
@@ -81,7 +81,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
     return score - strokesOnHole;
   };
 
-  const calculateSkins = () => {
+  const calculateSkins = useCallback(() => {
     if (!updateRoundData) return; // Don't calculate skins if we can't update data
     
     const results: SkinScore[] = [];
@@ -145,7 +145,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
         potPerHole: potPerSkin // Update the display value
       }
     }));
-  };
+  }, [players, scores, roundData.skinsGame.totalPot, updateRoundData]);
 
   const updateScore = (playerId: string, hole: number, newScore: number) => {
     if (isReadOnly || !updateRoundData) return;
