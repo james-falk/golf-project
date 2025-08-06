@@ -247,6 +247,17 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
     }
   };
 
+  // Get hardcoded prize pool amounts
+  const getPrizePool = (tab: PayoutTab): number => {
+    switch (tab) {
+      case 'thursday': return 360;
+      case 'friday': return 720;
+      case 'saturday': return 720;
+      case 'total': return 1800;
+      default: return 0;
+    }
+  };
+
   // Get the current data based on active tab
   const getCurrentData = () => {
     if (activePayoutTab === 'total') {
@@ -256,7 +267,7 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
         totalWinnings: calculatePlayerTotalWinnings(player.id)
       })).sort((a, b) => b.totalWinnings - a.totalWinnings);
 
-      const totalPayout = leaderboard.reduce((sum, player) => sum + player.totalWinnings, 0);
+      const totalPayout = getPrizePool('total'); // Use hardcoded amount
 
       return {
         leaderboard,
@@ -274,7 +285,7 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
         totalWinnings: calculatePlayerRoundWinnings(player.id, round)
       })).sort((a, b) => b.totalWinnings - a.totalWinnings);
 
-      const totalPayout = leaderboard.reduce((sum, player) => sum + player.totalWinnings, 0);
+      const totalPayout = getPrizePool(activePayoutTab); // Use hardcoded amount
 
       return {
         leaderboard,
@@ -302,7 +313,10 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">🏆 Tournament Payout Leaderboard</h2>
           <p className="text-lg text-gray-700">
-            Total Prize Pool: <span className="font-bold text-green-600">${currentData.totalPayout}</span>
+            {activePayoutTab === 'thursday' ? 'Thursday' :
+             activePayoutTab === 'friday' ? 'Friday' :
+             activePayoutTab === 'saturday' ? 'Saturday' :
+             'Total'} Prize Pool: <span className="font-bold text-green-600">${currentData.totalPayout}</span>
           </p>
           <p className="text-sm text-gray-600 mt-1">
             Combined winnings from Skins, Closest to Pin, and Scramble competitions
@@ -313,27 +327,27 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
       {/* Payout Tabs */}
       <div className="bg-white rounded-lg shadow-md">
         <div className="border-b border-gray-200">
-          <div className="flex justify-between items-center px-6">
-            <nav className="flex space-x-8" aria-label="Payout tabs">
-              {payoutTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActivePayoutTab(tab.id)}
-                  className={`${
-                    activePayoutTab === tab.id
-                      ? 'border-green-500 text-green-600 bg-green-50'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-3 sm:px-6 space-y-4 sm:space-y-0">
+              <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto w-full sm:w-auto" aria-label="Payout tabs">
+                {payoutTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActivePayoutTab(tab.id)}
+                    className={`${
+                      activePayoutTab === tab.id
+                        ? 'border-green-500 text-green-600 bg-green-50'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    } whitespace-nowrap py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200 flex-shrink-0`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
             
             <button
               onClick={exportToPDF}
               disabled={isExporting}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center space-x-2"
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-3 py-2 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-colors duration-200 flex items-center space-x-1 sm:space-x-2 w-full sm:w-auto justify-center"
             >
               {isExporting ? (
                 <>
@@ -352,7 +366,7 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
           </div>
         </div>
 
-        <div className="p-6" ref={contentRef}>
+        <div className="p-3 sm:p-6" ref={contentRef}>
           <div className="mb-6">
             <h3 className="text-xl font-semibold text-gray-900">{currentData.title}</h3>
             <p className="text-sm text-gray-600 mt-1">
@@ -363,7 +377,7 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
           {/* Leaderboard */}
           <div className="space-y-3 mb-8">
             {currentData.leaderboard.map((player, index) => (
-              <div key={player.id} className={`flex items-center justify-between p-4 rounded-lg border-2 ${
+              <div key={player.id} className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 ${
                 index === 0 && player.totalWinnings > 0
                   ? 'border-yellow-300 bg-yellow-50' // First place
                   : index === 1 && player.totalWinnings > 0
@@ -372,8 +386,8 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
                   ? 'border-orange-300 bg-orange-50' // Third place
                   : 'border-gray-200 bg-white' // Everyone else
               }`}>
-                <div className="flex items-center space-x-4">
-                  <div className={`text-2xl font-bold ${
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                  <div className={`text-lg sm:text-2xl font-bold ${
                     index === 0 && player.totalWinnings > 0 ? 'text-yellow-600' :
                     index === 1 && player.totalWinnings > 0 ? 'text-gray-600' :
                     index === 2 && player.totalWinnings > 0 ? 'text-orange-600' :
@@ -382,19 +396,19 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
                     #{index + 1}
                   </div>
                   <div>
-                    <div className="font-semibold text-lg text-gray-900">{player.name}</div>
-                                            <div className="text-sm text-gray-600">{player.group} Player</div>
+                    <div className="font-semibold text-base sm:text-lg text-gray-900">{player.name}</div>
+                                            <div className="text-xs sm:text-sm text-gray-600">{player.group} Player</div>
                   </div>
                 </div>
                 
                 <div className="text-right">
-                  <div className={`text-2xl font-bold ${
+                  <div className={`text-lg sm:text-2xl font-bold ${
                     player.totalWinnings > 0 ? 'text-green-600' : 'text-gray-400'
                   }`}>
                     ${player.totalWinnings}
                   </div>
                   {index === 0 && player.totalWinnings > 0 && (
-                    <div className="text-sm text-yellow-600 font-medium">👑 Champion</div>
+                    <div className="text-xs sm:text-sm text-yellow-600 font-medium">👑 Champion</div>
                   )}
                 </div>
               </div>

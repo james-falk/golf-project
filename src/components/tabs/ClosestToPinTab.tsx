@@ -5,15 +5,18 @@ import { Player, ClosestToPinHole, RoundData } from '@/types/golf';
 
 interface ClosestToPinTabProps {
   roundData: RoundData;
-  updateRoundData: (updater: (round: RoundData) => RoundData) => void;
+  updateRoundData?: (updater: (round: RoundData) => RoundData) => void;
+  isReadOnly?: boolean;
 }
 
-const ClosestToPinTab: React.FC<ClosestToPinTabProps> = ({ roundData, updateRoundData }) => {
+const ClosestToPinTab: React.FC<ClosestToPinTabProps> = ({ roundData, updateRoundData, isReadOnly = false }) => {
   const players = roundData.closestToPinGame.players;
   const holes = roundData.closestToPinGame.holes;
   const totalPrizePool = roundData.closestToPinGame.totalPrizePool;
 
   const updateHoleWinner = (holeNumber: number, winnerId: string) => {
+    if (isReadOnly || !updateRoundData) return;
+    
     updateRoundData(round => ({
       ...round,
       closestToPinGame: {
@@ -142,10 +145,13 @@ const ClosestToPinTab: React.FC<ClosestToPinTabProps> = ({ roundData, updateRoun
                       <button
                         key={player.id}
                         onClick={() => updateHoleWinner(hole.hole, player.id)}
+                        disabled={isReadOnly}
                         className={`p-3 border rounded-lg transition-colors text-left ${
                           hole.winner === player.id
                             ? 'border-blue-500 bg-blue-100'
-                            : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'
+                            : isReadOnly 
+                              ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                              : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'
                         }`}
                       >
                         <div className={`font-medium ${

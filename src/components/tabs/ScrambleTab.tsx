@@ -7,16 +7,19 @@ import { demoPlayers, demoCourse } from '@/data/demoData';
 
 interface ScrambleTabProps {
   roundData: RoundData;
-  updateRoundData: (updater: (round: RoundData) => RoundData) => void;
+  updateRoundData?: (updater: (round: RoundData) => RoundData) => void;
+  isReadOnly?: boolean;
 }
 
-const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData }) => {
+const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, isReadOnly = false }) => {
   const teams = roundData.scrambleGame.teams;
   const scores = roundData.scrambleGame.scores;
   const results = roundData.scrambleGame.results;
 
   // Ensure exactly 5 teams with correct structure
   useEffect(() => {
+    if (!updateRoundData) return; // Don't initialize teams if we can't update data
+    
     if (teams.length !== 5 || teams.some(team => team.players.length !== 4)) {
       const initialTeams: ScrambleTeam[] = Array.from({ length: 5 }, (_, i) => ({
         id: `team-${i + 1}`,
@@ -40,6 +43,8 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData })
   }, [scores, teams]);
 
   const calculateResults = () => {
+    if (!updateRoundData) return; // Don't calculate results if we can't update data
+    
     const teamResults: ScrambleScore[] = teams.map(team => {
       const teamScores = scores[team.id] || [];
       const totalScore = teamScores.reduce((sum, score) => sum + score.score, 0);
@@ -73,6 +78,8 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData })
   };
 
   const updateTeamPlayer = (teamId: string, playerIndex: number, playerId: string | null) => {
+    if (isReadOnly || !updateRoundData) return;
+    
     updateRoundData(round => ({
       ...round,
       scrambleGame: {
@@ -90,6 +97,8 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData })
   };
 
   const updateTeamName = (teamId: string, newName: string) => {
+    if (isReadOnly || !updateRoundData) return;
+    
     updateRoundData(round => ({
       ...round,
       scrambleGame: {
@@ -104,6 +113,8 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData })
   };
 
   const updateTeamTotalScore = (teamId: string, totalScore: number) => {
+    if (isReadOnly || !updateRoundData) return;
+    
     updateRoundData(round => {
       const teamScores = totalScore > 0 ? [{ hole: 1, score: totalScore, par: 72 }] : [];
       
@@ -242,7 +253,7 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData })
                         const team = teams.find(t => t.id === result.teamId);
                         const playerCount = team ? getTeamPlayerCount(team) : 0;
                         const perPlayerWinnings = calculatePerPlayerWinnings(rank, playerCount);
-                        const totalWinnings = rank === 1 ? 360 : 80;
+                        const totalWinnings = rank === 1 ? 280 : 80;
                         
                         return (
                           <div className="text-lg font-bold text-green-600 mt-1">
@@ -277,7 +288,7 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData })
         <h2 className="text-xl font-semibold text-gray-900 mb-6">Scramble Team Setup - The Classic Course</h2>
         <div className="space-y-6">
           {teams.map(team => (
-            <div key={team.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            <div key={team.id} className="bg-white border border-gray-200 rounded-lg p-3 sm:p-6 shadow-sm">
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Team Name
@@ -287,7 +298,12 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData })
                   value={team.name}
                   onChange={(e) => updateTeamName(team.id, e.target.value)}
                   placeholder="Enter team name..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white font-semibold text-gray-900"
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none font-semibold text-gray-900 ${
+                    isReadOnly 
+                      ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
+                      : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white'
+                  }`}
                 />
               </div>
               
@@ -303,7 +319,12 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData })
                       <select
                         value={playerId || ''}
                         onChange={(e) => updateTeamPlayer(team.id, playerIndex, e.target.value || null)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
+                        disabled={isReadOnly}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none text-gray-900 ${
+                          isReadOnly 
+                            ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
+                            : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white'
+                        }`}
                       >
                         <option value="">Select Player...</option>
                         {availablePlayers.map(player => (
@@ -336,7 +357,12 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData })
                       value={scores[team.id]?.[0]?.score || ''}
                       onChange={(e) => updateTeamTotalScore(team.id, Number(e.target.value))}
                       placeholder="Enter total score..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
+                      disabled={isReadOnly}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none text-gray-900 ${
+                        isReadOnly 
+                          ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
+                          : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white'
+                      }`}
                       min="50"
                       max="150"
                     />

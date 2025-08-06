@@ -1,0 +1,1040 @@
+{
+  "rounds": [
+    {
+      "id": "thursday",
+      "name": "Thursday - Payout",
+      "day": "Thursday",
+      "skinsGame": {
+        "players": [
+          {
+            "id": "1",
+            "name": "Ethan",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "2",
+            "name": "John Porth",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "3",
+            "name": "Roger",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "4",
+            "name": "Jeff Felts",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "5",
+            "name": "Robert",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "6",
+            "name": "Steve",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "7",
+            "name": "James",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "8",
+            "name": "Maxwell",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "9",
+            "name": "Kent",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "10",
+            "name": "Thomas",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "11",
+            "name": "Spencer",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "12",
+            "name": "Ken",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "13",
+            "name": "Bryce",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "14",
+            "name": "Lucas",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "15",
+            "name": "Tate",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "16",
+            "name": "Mitchell",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "17",
+            "name": "Greg",
+            "group": "D",
+            "handicap": 0
+          },
+          {
+            "id": "18",
+            "name": "Pete",
+            "group": "D",
+            "handicap": 0
+          }
+        ],
+        "scores": {},
+        "skinResults": [],
+        "potPerHole": 0,
+        "totalPot": 360
+      },
+      "closestToPinGame": {
+        "players": [
+          {
+            "id": "1",
+            "name": "Ethan",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "2",
+            "name": "John Porth",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "3",
+            "name": "Roger",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "4",
+            "name": "Jeff Felts",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "5",
+            "name": "Robert",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "6",
+            "name": "Steve",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "7",
+            "name": "James",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "8",
+            "name": "Maxwell",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "9",
+            "name": "Kent",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "10",
+            "name": "Thomas",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "11",
+            "name": "Spencer",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "12",
+            "name": "Ken",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "13",
+            "name": "Bryce",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "14",
+            "name": "Lucas",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "15",
+            "name": "Tate",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "16",
+            "name": "Mitchell",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "17",
+            "name": "Greg",
+            "group": "D",
+            "handicap": 0
+          },
+          {
+            "id": "18",
+            "name": "Pete",
+            "group": "D",
+            "handicap": 0
+          }
+        ],
+        "holes": [
+          {
+            "hole": 6,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5,
+            "winner": "1"
+          },
+          {
+            "hole": 9,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5,
+            "winner": "10"
+          },
+          {
+            "hole": 13,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5,
+            "winner": "10"
+          },
+          {
+            "hole": 17,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5,
+            "winner": "14"
+          }
+        ],
+        "totalPrizePool": 250
+      },
+      "scrambleGame": {
+        "teams": [
+          {
+            "id": "team-1",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-2",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-3",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-4",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-5",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ],
+        "scores": {},
+        "results": []
+      }
+    },
+    {
+      "id": "friday",
+      "name": "Friday - Payout",
+      "day": "Friday",
+      "skinsGame": {
+        "players": [
+          {
+            "id": "1",
+            "name": "Ethan",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "2",
+            "name": "John Porth",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "3",
+            "name": "Roger",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "4",
+            "name": "Jeff Felts",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "5",
+            "name": "Robert",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "6",
+            "name": "Steve",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "7",
+            "name": "James",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "8",
+            "name": "Maxwell",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "9",
+            "name": "Kent",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "10",
+            "name": "Thomas",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "11",
+            "name": "Spencer",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "12",
+            "name": "Ken",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "13",
+            "name": "Bryce",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "14",
+            "name": "Lucas",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "15",
+            "name": "Tate",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "16",
+            "name": "Mitchell",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "17",
+            "name": "Greg",
+            "group": "D",
+            "handicap": 0
+          },
+          {
+            "id": "18",
+            "name": "Pete",
+            "group": "D",
+            "handicap": 0
+          }
+        ],
+        "scores": {},
+        "skinResults": [],
+        "potPerHole": 0,
+        "totalPot": 360
+      },
+      "closestToPinGame": {
+        "players": [
+          {
+            "id": "1",
+            "name": "Ethan",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "2",
+            "name": "John Porth",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "3",
+            "name": "Roger",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "4",
+            "name": "Jeff Felts",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "5",
+            "name": "Robert",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "6",
+            "name": "Steve",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "7",
+            "name": "James",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "8",
+            "name": "Maxwell",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "9",
+            "name": "Kent",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "10",
+            "name": "Thomas",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "11",
+            "name": "Spencer",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "12",
+            "name": "Ken",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "13",
+            "name": "Bryce",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "14",
+            "name": "Lucas",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "15",
+            "name": "Tate",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "16",
+            "name": "Mitchell",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "17",
+            "name": "Greg",
+            "group": "D",
+            "handicap": 0
+          },
+          {
+            "id": "18",
+            "name": "Pete",
+            "group": "D",
+            "handicap": 0
+          }
+        ],
+        "holes": [
+          {
+            "hole": 6,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5
+          },
+          {
+            "hole": 9,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5
+          },
+          {
+            "hole": 13,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5
+          },
+          {
+            "hole": 17,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5
+          }
+        ],
+        "totalPrizePool": 250
+      },
+      "scrambleGame": {
+        "teams": [
+          {
+            "id": "team-1",
+            "name": "",
+            "players": [
+              "11",
+              "7",
+              "8",
+              "13"
+            ]
+          },
+          {
+            "id": "team-2",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-3",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-4",
+            "name": "pecker",
+            "players": [
+              "12",
+              "4",
+              "5",
+              "10"
+            ]
+          },
+          {
+            "id": "team-5",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ],
+        "scores": {
+          "team-1": [
+            {
+              "hole": 1,
+              "score": 75,
+              "par": 72
+            }
+          ],
+          "team-4": [
+            {
+              "hole": 1,
+              "score": 70,
+              "par": 72
+            }
+          ]
+        },
+        "results": [
+          {
+            "teamId": "team-4",
+            "scores": [
+              {
+                "hole": 1,
+                "score": 70,
+                "par": 72
+              }
+            ],
+            "totalScore": 70
+          },
+          {
+            "teamId": "team-1",
+            "scores": [
+              {
+                "hole": 1,
+                "score": 75,
+                "par": 72
+              }
+            ],
+            "totalScore": 75
+          },
+          {
+            "teamId": "team-2",
+            "scores": [],
+            "totalScore": 0
+          },
+          {
+            "teamId": "team-3",
+            "scores": [],
+            "totalScore": 0
+          },
+          {
+            "teamId": "team-5",
+            "scores": [],
+            "totalScore": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "saturday",
+      "name": "Saturday - Payout",
+      "day": "Saturday",
+      "skinsGame": {
+        "players": [
+          {
+            "id": "1",
+            "name": "Ethan",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "2",
+            "name": "John Porth",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "3",
+            "name": "Roger",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "4",
+            "name": "Jeff Felts",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "5",
+            "name": "Robert",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "6",
+            "name": "Steve",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "7",
+            "name": "James",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "8",
+            "name": "Maxwell",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "9",
+            "name": "Kent",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "10",
+            "name": "Thomas",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "11",
+            "name": "Spencer",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "12",
+            "name": "Ken",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "13",
+            "name": "Bryce",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "14",
+            "name": "Lucas",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "15",
+            "name": "Tate",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "16",
+            "name": "Mitchell",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "17",
+            "name": "Greg",
+            "group": "D",
+            "handicap": 0
+          },
+          {
+            "id": "18",
+            "name": "Pete",
+            "group": "D",
+            "handicap": 0
+          }
+        ],
+        "scores": {},
+        "skinResults": [],
+        "potPerHole": 0,
+        "totalPot": 360
+      },
+      "closestToPinGame": {
+        "players": [
+          {
+            "id": "1",
+            "name": "Ethan",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "2",
+            "name": "John Porth",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "3",
+            "name": "Roger",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "4",
+            "name": "Jeff Felts",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "5",
+            "name": "Robert",
+            "group": "A",
+            "handicap": 0
+          },
+          {
+            "id": "6",
+            "name": "Steve",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "7",
+            "name": "James",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "8",
+            "name": "Maxwell",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "9",
+            "name": "Kent",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "10",
+            "name": "Thomas",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "11",
+            "name": "Spencer",
+            "group": "B",
+            "handicap": 0
+          },
+          {
+            "id": "12",
+            "name": "Ken",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "13",
+            "name": "Bryce",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "14",
+            "name": "Lucas",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "15",
+            "name": "Tate",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "16",
+            "name": "Mitchell",
+            "group": "C",
+            "handicap": 0
+          },
+          {
+            "id": "17",
+            "name": "Greg",
+            "group": "D",
+            "handicap": 0
+          },
+          {
+            "id": "18",
+            "name": "Pete",
+            "group": "D",
+            "handicap": 0
+          }
+        ],
+        "holes": [
+          {
+            "hole": 6,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5,
+            "winner": "9"
+          },
+          {
+            "hole": 9,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5,
+            "winner": "18"
+          },
+          {
+            "hole": 13,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5,
+            "winner": "6"
+          },
+          {
+            "hole": 17,
+            "par": 3,
+            "isActive": true,
+            "prize": 62.5,
+            "winner": "6"
+          }
+        ],
+        "totalPrizePool": 250
+      },
+      "scrambleGame": {
+        "teams": [
+          {
+            "id": "team-1",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-2",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-3",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-4",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "team-5",
+            "name": "",
+            "players": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ],
+        "scores": {},
+        "results": [
+          {
+            "teamId": "team-1",
+            "scores": [],
+            "totalScore": 0
+          },
+          {
+            "teamId": "team-2",
+            "scores": [],
+            "totalScore": 0
+          },
+          {
+            "teamId": "team-3",
+            "scores": [],
+            "totalScore": 0
+          },
+          {
+            "teamId": "team-4",
+            "scores": [],
+            "totalScore": 0
+          },
+          {
+            "teamId": "team-5",
+            "scores": [],
+            "totalScore": 0
+          }
+        ]
+      }
+    }
+  ],
+  "totalWinnings": {}
+}

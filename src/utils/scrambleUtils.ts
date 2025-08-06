@@ -14,7 +14,7 @@ export const calculatePerPlayerWinnings = (rank: number, playerCount: number): n
   if (playerCount === 0) return 0;
   
   if (rank === 1) {
-    return 360 / playerCount; // First place: $360 divided by team size
+    return 280 / playerCount; // First place: $280 divided by team size
   } else if (rank === 2) {
     return 80 / playerCount; // Second place: $80 divided by team size
   }

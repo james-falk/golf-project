@@ -6,10 +6,11 @@ import { demoCourse } from '@/data/demoData';
 
 interface SkinsTabProps {
   roundData: RoundData;
-  updateRoundData: (updater: (round: RoundData) => RoundData) => void;
+  updateRoundData?: (updater: (round: RoundData) => RoundData) => void;
+  isReadOnly?: boolean;
 }
 
-const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData }) => {
+const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadOnly = false }) => {
   const players = roundData.skinsGame.players;
   const scores = roundData.skinsGame.scores;
   const potPerHole = roundData.skinsGame.potPerHole;
@@ -81,6 +82,8 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData }) => {
   };
 
   const calculateSkins = () => {
+    if (!updateRoundData) return; // Don't calculate skins if we can't update data
+    
     const results: SkinScore[] = [];
     const holesWithScores = Math.max(...players.map(p => scores[p.id]?.length || 0));
 
@@ -145,6 +148,8 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData }) => {
   };
 
   const updateScore = (playerId: string, hole: number, newScore: number) => {
+    if (isReadOnly || !updateRoundData) return;
+    
     updateRoundData(round => {
       const currentScores = round.skinsGame.scores[playerId] || [];
       const playerScores = currentScores.filter(s => s.hole !== hole);
@@ -264,9 +269,9 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData }) => {
       </div>
 
       {/* Scorecard */}
-      <div className="bg-white rounded-lg shadow-md p-6 overflow-x-auto">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">The Tribute Skins Calculator</h2>
-        <div className="text-sm text-gray-600 mb-4">
+      <div className="bg-white rounded-lg shadow-md p-3 sm:p-6 overflow-x-auto">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">The Tribute Skins Calculator</h2>
+        <div className="text-xs sm:text-sm text-gray-600 mb-4">
           Showing {players.length} players • Group A: 0 strokes, B: 6 strokes, C: 12 strokes, D: 18 strokes
         </div>
         <div className="min-w-full">
@@ -347,6 +352,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData }) => {
                             inputMode="numeric"
                             pattern="[0-9]*"
                             value={playerScore?.score || ''}
+                            disabled={isReadOnly}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^[1-9]$/.test(value)) {
@@ -396,7 +402,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData }) => {
                                 e.preventDefault();
                               }
                             }}
-                            className="w-12 px-2 py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-black font-semibold"
+                            className="w-14 sm:w-12 px-2 py-2 sm:py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-black font-semibold"
                             placeholder=""
                             maxLength={2}
                           />
@@ -491,6 +497,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData }) => {
                             inputMode="numeric"
                             pattern="[0-9]*"
                             value={playerScore?.score || ''}
+                            disabled={isReadOnly}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^[1-9]$/.test(value)) {
@@ -540,7 +547,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData }) => {
                                 e.preventDefault();
                               }
                             }}
-                            className="w-12 px-2 py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-black font-semibold"
+                            className="w-14 sm:w-12 px-2 py-2 sm:py-1 text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-black font-semibold"
                             placeholder=""
                             maxLength={2}
                           />
