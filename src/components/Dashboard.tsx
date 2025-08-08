@@ -11,7 +11,7 @@ import LeaderboardTab from './tabs/LeaderboardTab';
 // import TotalWinnings from './TotalWinnings';
 
 const Dashboard = () => {
-  const { userRole, logout } = useAuth();
+  const { userRole, logout, preloadedData } = useAuth();
   
   // Load saved tab and round state, or use defaults
   const [activeTab, setActiveTab] = useState<GameTab>(() => {
@@ -39,12 +39,20 @@ const Dashboard = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const hasInitiallyLoaded = useRef(false);
 
-  // Load data on mount
+  // Load data on mount - use preloaded data if available
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const data = await loadTournamentData();
+        
+        // Use preloaded data if available, otherwise load from server
+        let data;
+        if (preloadedData) {
+          data = preloadedData;
+        } else {
+          data = await loadTournamentData();
+        }
+        
         setTournamentData(data);
         hasInitiallyLoaded.current = true;
       } catch (error) {
@@ -55,7 +63,7 @@ const Dashboard = () => {
     };
     
     loadData();
-  }, []);
+  }, [preloadedData]);
 
   // Save data whenever it changes (admin only) - with debounce
   useEffect(() => {
@@ -122,8 +130,6 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
         <div className="text-center">
-          <div className="text-6xl mb-4">🏌️</div>
-          <div className="text-xl font-semibold text-gray-700 mb-4">Loading tournament data...</div>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
         </div>
       </div>

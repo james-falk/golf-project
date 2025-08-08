@@ -8,7 +8,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   userRole: UserRole | null;
   isLoading: boolean;
-  login: (code: string, role: UserRole) => void;
+  preloadedData: any;
+  login: (code: string, role: UserRole, preloadedData?: any) => void;
   logout: () => void;
 }
 
@@ -30,6 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [preloadedData, setPreloadedData] = useState<any>(null);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -57,9 +59,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = (code: string, role: UserRole) => {
+  const login = (code: string, role: UserRole, preloadedDataParam?: any) => {
     setIsAuthenticated(true);
     setUserRole(role);
+    setPreloadedData(preloadedDataParam);
     
     // Set session to expire in 24 hours
     const expiryTime = new Date().getTime() + (24 * 60 * 60 * 1000);
@@ -70,6 +73,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     setIsAuthenticated(false);
     setUserRole(null);
+    setPreloadedData(null);
     localStorage.removeItem('golf-user-role');
     localStorage.removeItem('golf-session-expiry');
   };
@@ -78,6 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated,
     userRole,
     isLoading,
+    preloadedData,
     login,
     logout,
   };
