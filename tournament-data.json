@@ -118,7 +118,7 @@
         "scores": {},
         "skinResults": [],
         "potPerHole": 0,
-        "totalPot": 360
+        "totalPot": 280
       },
       "closestToPinGame": {
         "players": [
@@ -236,32 +236,32 @@
             "hole": 6,
             "par": 3,
             "isActive": true,
-            "prize": 62.5,
+            "prize": 20,
             "winner": "1"
           },
           {
             "hole": 9,
             "par": 3,
             "isActive": true,
-            "prize": 62.5,
+            "prize": 20,
             "winner": "10"
           },
           {
             "hole": 13,
             "par": 3,
             "isActive": true,
-            "prize": 62.5,
+            "prize": 20,
             "winner": "10"
           },
           {
             "hole": 17,
             "par": 3,
             "isActive": true,
-            "prize": 62.5,
+            "prize": 20,
             "winner": "14"
           }
         ],
-        "totalPrizePool": 250
+        "totalPrizePool": 80
       },
       "scrambleGame": {
         "teams": [
@@ -438,7 +438,7 @@
         "scores": {},
         "skinResults": [],
         "potPerHole": 0,
-        "totalPot": 360
+        "totalPot": 280
       },
       "closestToPinGame": {
         "players": [
@@ -556,28 +556,28 @@
             "hole": 6,
             "par": 3,
             "isActive": true,
-            "prize": 62.5
+            "prize": 20
           },
           {
             "hole": 9,
             "par": 3,
             "isActive": true,
-            "prize": 62.5
+            "prize": 20
           },
           {
             "hole": 13,
             "par": 3,
             "isActive": true,
-            "prize": 62.5
+            "prize": 20
           },
           {
             "hole": 17,
             "par": 3,
             "isActive": true,
-            "prize": 62.5
+            "prize": 20
           }
         ],
-        "totalPrizePool": 250
+        "totalPrizePool": 80
       },
       "scrambleGame": {
         "teams": [
@@ -941,7 +941,7 @@
           }
         ],
         "potPerHole": 36,
-        "totalPot": 360
+        "totalPot": 280
       },
       "closestToPinGame": {
         "players": [
@@ -1059,32 +1059,32 @@
             "hole": 6,
             "par": 3,
             "isActive": true,
-            "prize": 62.5,
+            "prize": 20,
             "winner": "9"
           },
           {
             "hole": 9,
             "par": 3,
             "isActive": true,
-            "prize": 62.5,
+            "prize": 20,
             "winner": "2"
           },
           {
             "hole": 13,
             "par": 3,
             "isActive": true,
-            "prize": 62.5,
+            "prize": 20,
             "winner": "6"
           },
           {
             "hole": 17,
             "par": 3,
             "isActive": true,
-            "prize": 62.5,
+            "prize": 20,
             "winner": "6"
           }
         ],
-        "totalPrizePool": 250
+        "totalPrizePool": 80
       },
       "scrambleGame": {
         "teams": [
