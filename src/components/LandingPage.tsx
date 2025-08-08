@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import FakeCaptcha from './FakeCaptcha';
 
 interface LandingPageProps {
@@ -55,9 +56,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onCodeSubmit }) => {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="mb-4">
-              <img 
+              <Image 
                 src="/landing-page-image.png" 
                 alt="Golf Tournament Logo" 
+                width={160}
+                height={160}
                 className="w-40 h-40 mx-auto object-contain"
               />
             </div>
