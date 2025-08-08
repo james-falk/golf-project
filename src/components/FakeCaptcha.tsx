@@ -144,6 +144,13 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
               }}
               priority
             />
+            
+            {/* Subtle proceed message */}
+            {!isJeffSpinning && (
+              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white text-sm opacity-70 bg-black bg-opacity-50 px-4 py-2 rounded-lg backdrop-blur-sm">
+                Click anywhere to proceed
+              </div>
+            )}
           </div>
         </div>
       </div>
