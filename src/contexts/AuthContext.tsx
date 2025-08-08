@@ -8,8 +8,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   userRole: UserRole | null;
   isLoading: boolean;
-  preloadedData: any;
-  login: (code: string, role: UserRole, preloadedData?: any) => void;
+  preloadedData: unknown;
+  login: (code: string, role: UserRole, preloadedData?: unknown) => void;
   logout: () => void;
 }
 
@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [preloadedData, setPreloadedData] = useState<any>(null);
+  const [preloadedData, setPreloadedData] = useState<unknown>(null);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = (code: string, role: UserRole, preloadedDataParam?: any) => {
+  const login = (code: string, role: UserRole, preloadedDataParam?: unknown) => {
     setIsAuthenticated(true);
     setUserRole(role);
     setPreloadedData(preloadedDataParam);

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import FakeCaptcha from './FakeCaptcha';
 
 interface LandingPageProps {
-  onCodeSubmit: (code: string, role: 'admin' | 'viewer', preloadedData?: any) => void;
+  onCodeSubmit: (code: string, role: 'admin' | 'viewer', preloadedData?: unknown) => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onCodeSubmit }) => {
@@ -33,7 +33,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onCodeSubmit }) => {
     }
   };
 
-  const handleCaptchaComplete = (preloadedData?: any) => {
+  const handleCaptchaComplete = (preloadedData?: unknown) => {
     if (pendingRole) {
       onCodeSubmit(code, pendingRole, preloadedData);
     }

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { loadTournamentData } from '@/utils/storage';
 
 interface FakeCaptchaProps {
-  onComplete: (preloadedData?: any) => void;
+  onComplete: (preloadedData?: unknown) => void;
 }
 
 const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
@@ -12,7 +12,7 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
   const [stage, setStage] = useState<'daryls' | 'larrys' | 'static'>('daryls');
   const [isHumanChecked, setIsHumanChecked] = useState(false);
   const [timeLeft, setTimeLeft] = useState(5);
-  const [preloadedData, setPreloadedData] = useState<any>(null);
+  const [preloadedData, setPreloadedData] = useState<unknown>(null);
 
   // Real Daryl and Larry images
   const darylImages = [
