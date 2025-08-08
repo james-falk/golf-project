@@ -10,10 +10,11 @@ interface FakeCaptchaProps {
 
 const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
   const [selectedSquares, setSelectedSquares] = useState<Set<number>>(new Set());
-  const [stage, setStage] = useState<'daryls' | 'larrys' | 'static'>('daryls');
+  const [stage, setStage] = useState<'daryls' | 'larrys' | 'static' | 'jeff'>('daryls');
   const [isHumanChecked, setIsHumanChecked] = useState(false);
   const [timeLeft, setTimeLeft] = useState(5);
   const [preloadedData, setPreloadedData] = useState<unknown>(null);
+  const [isJeffSpinning, setIsJeffSpinning] = useState(false);
 
   // Real Daryl and Larry images
   const darylImages = [
@@ -33,9 +34,9 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
     } else if (stage === 'static' && timeLeft === 0) {
-      onComplete(preloadedData);
+      setStage('jeff');
     }
-  }, [timeLeft, stage, onComplete, preloadedData]);
+  }, [timeLeft, stage]);
 
   // Start preloading data when countdown begins
   useEffect(() => {
@@ -73,10 +74,47 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
     }
   };
 
+  const handleJeffClick = () => {
+    setIsJeffSpinning(true);
+    // After spin animation completes, proceed to dashboard
+    setTimeout(() => {
+      onComplete(preloadedData);
+    }, 1000); // 1 second for spin and fade animation
+  };
+
+  // Jeff jump scare stage
+  if (stage === 'jeff') {
+    return (
+      <div 
+        className="fixed inset-0 bg-black z-50 flex items-center justify-center cursor-pointer"
+        onClick={handleJeffClick}
+      >
+        <div 
+          className={`relative w-full h-full flex items-center justify-center ${
+            isJeffSpinning ? 'animate-spin' : ''
+          }`}
+          style={{
+            animation: isJeffSpinning ? 'jeffSpinOut 1s ease-in forwards' : 'none'
+          }}
+        >
+          <Image
+            src="/jeff.jpeg"
+            alt="Jeff Jump Scare"
+            fill
+            className="object-cover"
+            style={{
+              opacity: isJeffSpinning ? 0 : 1,
+              transition: isJeffSpinning ? 'opacity 1s ease-in' : 'none'
+            }}
+            priority
+          />
+        </div>
+      </div>
+    );
+  }
+
   // Movie projector countdown with big popping numbers
   if (stage === 'static') {
-    const isExploding = timeLeft === 0;
-    
     return (
       <div className="fixed inset-0 bg-black z-50 flex items-center justify-center overflow-hidden">
         {/* Film grain and scratches */}
@@ -106,90 +144,57 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
         
         {/* Main countdown display */}
         <div className="relative z-10 text-center">
-          {!isExploding ? (
-            <>
-              {/* Film countdown circle */}
-              <div className="relative w-80 h-80 mx-auto mb-8">
-                {/* Outer film reel circle */}
-                <div 
-                  className="absolute inset-0 border-8 border-white rounded-full opacity-80"
-                  style={{
-                    background: 'radial-gradient(circle, transparent 60%, rgba(255,255,255,0.1) 70%, transparent 80%)'
-                  }}
-                />
-                
-                {/* Inner circle with crosshairs */}
-                <div className="absolute inset-8 border-2 border-white rounded-full opacity-60">
-                  {/* Crosshairs */}
-                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white transform -translate-y-0.5"></div>
-                  <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white transform -translate-x-0.5"></div>
-                </div>
-                
-                {/* Big popping number in center */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div 
-                    key={timeLeft}
-                    className="text-white font-bold"
-                    style={{
-                      fontSize: '12rem',
-                      textShadow: `
-                        0 0 20px rgba(255,255,255,0.8),
-                        0 0 40px rgba(255,255,255,0.6),
-                        0 0 60px rgba(255,255,255,0.4)
-                      `,
-                      animation: 'popAndFade 1s ease-out forwards',
-                      fontFamily: 'serif'
-                    }}
-                  >
-                    {timeLeft}
-                  </div>
-                </div>
-                
-                {/* Rotating tick marks around the circle */}
-                {[...Array(12)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute w-1 h-8 bg-white origin-bottom"
-                    style={{
-                      top: '10px',
-                      left: '50%',
-                      transform: `translateX(-50%) rotate(${i * 30}deg)`,
-                      transformOrigin: '50% 140px'
-                    }}
-                  />
-                ))}
-              </div>
-              
-
-            </>
-          ) : (
-            /* Bomb explosion effect */
-            <div className="relative">
+          {/* Film countdown circle */}
+          <div className="relative w-80 h-80 mx-auto mb-8">
+            {/* Outer film reel circle */}
+            <div 
+              className="absolute inset-0 border-8 border-white rounded-full opacity-80"
+              style={{
+                background: 'radial-gradient(circle, transparent 60%, rgba(255,255,255,0.1) 70%, transparent 80%)'
+              }}
+            />
+            
+            {/* Inner circle with crosshairs */}
+            <div className="absolute inset-8 border-2 border-white rounded-full opacity-60">
+              {/* Crosshairs */}
+              <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white transform -translate-y-0.5"></div>
+              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white transform -translate-x-0.5"></div>
+            </div>
+            
+            {/* Big popping number in center */}
+            <div className="absolute inset-0 flex items-center justify-center">
               <div 
-                className="text-9xl"
+                key={timeLeft}
+                className="text-white font-bold"
                 style={{
-                  animation: 'bombExplode 1s ease-out forwards'
+                  fontSize: '12rem',
+                  textShadow: `
+                    0 0 20px rgba(255,255,255,0.8),
+                    0 0 40px rgba(255,255,255,0.6),
+                    0 0 60px rgba(255,255,255,0.4)
+                  `,
+                  animation: 'popAndFade 1s ease-out forwards',
+                  fontFamily: 'serif'
                 }}
               >
-                💥💥💥
-              </div>
-              <div className="absolute inset-0 text-8xl animate-ping">
-                🔥
-              </div>
-              <div className="absolute inset-0 text-6xl animate-spin">
-                💥⚡💥⚡💥
-              </div>
-              <div className="absolute inset-0 text-4xl animate-bounce">
-                🌪️💨🌪️💨🌪️
-              </div>
-              <div className="mt-8 text-red-500 text-4xl font-bold animate-pulse font-mono">
-                💣 BOOM! 💣
-              </div>
-              <div className="mt-2 text-yellow-300 text-xl font-bold animate-bounce">
-                ACCESS GRANTED
+                {timeLeft}
               </div>
             </div>
-          )}
+            
+            {/* Rotating tick marks around the circle */}
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-8 bg-white origin-bottom"
+                style={{
+                  top: '10px',
+                  left: '50%',
+                  transform: `translateX(-50%) rotate(${i * 30}deg)`,
+                  transformOrigin: '50% 140px'
+                }}
+              />
+            ))}
+          </div>
         </div>
         
         <style jsx>{`
@@ -238,29 +243,17 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
             }
           }
           
-          @keyframes bombExplode {
+          @keyframes jeffSpinOut {
             0% { 
-              transform: scale(1); 
+              transform: rotate(0deg) scale(1); 
               opacity: 1; 
             }
-            20% { 
-              transform: scale(2); 
-              opacity: 1; 
-            }
-            40% { 
-              transform: scale(4); 
-              opacity: 0.9; 
-            }
-            60% { 
-              transform: scale(6); 
-              opacity: 0.7; 
-            }
-            80% { 
-              transform: scale(8); 
-              opacity: 0.4; 
+            50% { 
+              transform: rotate(180deg) scale(1.2); 
+              opacity: 0.8; 
             }
             100% { 
-              transform: scale(10); 
+              transform: rotate(360deg) scale(0); 
               opacity: 0; 
             }
           }
