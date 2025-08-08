@@ -16,6 +16,8 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
   const [preloadedData, setPreloadedData] = useState<unknown>(null);
   const [isJeffSpinning, setIsJeffSpinning] = useState(false);
   const [selectedJeffImage, setSelectedJeffImage] = useState<string>('');
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [loadedCount, setLoadedCount] = useState(0);
 
   // Real Daryl and Larry images
   const darylImages = [
@@ -61,7 +63,30 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
     }
   }, [stage, preloadedData]);
 
+  // Reset image loading state when stage changes
+  useEffect(() => {
+    setImagesLoaded(false);
+    setLoadedCount(0);
+  }, [stage]);
+
+  // Check if all images are loaded
+  useEffect(() => {
+    const imageCount = currentImages.filter(item => item.startsWith('/')).length;
+    const emojiCount = currentImages.filter(item => !item.startsWith('/')).length;
+    
+    // All actual images loaded + account for emojis (which don't need loading)
+    if (loadedCount === imageCount) {
+      setImagesLoaded(true);
+    }
+  }, [loadedCount, currentImages]);
+
+  const handleImageLoad = () => {
+    setLoadedCount(prev => prev + 1);
+  };
+
   const toggleSquare = (id: number) => {
+    if (!imagesLoaded) return; // Don't allow selection until images are loaded
+    
     const newSelected = new Set(selectedSquares);
     if (newSelected.has(id)) {
       newSelected.delete(id);
@@ -274,13 +299,22 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl p-6 max-w-lg w-full">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="text-sm text-gray-700 mb-2">Select all the images with</div>
-          <h1 className="text-xl font-bold text-gray-900 mb-4">{currentTarget}</h1>
-          <p className="text-sm text-gray-500">If there are none, click verify</p>
+      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full overflow-hidden">
+        {/* Header with blue background */}
+        <div className="bg-blue-500 text-white px-6 py-4 text-center">
+          <div className="text-sm mb-1">Select all the images with</div>
+          <h1 className="text-lg font-semibold">{currentTarget}</h1>
+          <p className="text-xs mt-2 opacity-90">If there are none, click verify</p>
+          {!imagesLoaded && (
+            <div className="flex items-center justify-center mt-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              <span className="text-xs opacity-90">Loading images...</span>
+            </div>
+          )}
         </div>
+        
+        {/* Content area */}
+        <div className="p-6">
 
         {/* 3x3 Grid */}
         <div className="grid grid-cols-3 gap-2 mb-6">
@@ -288,13 +322,20 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
             <div
               key={index}
               onClick={() => toggleSquare(index)}
+              onTouchEnd={(e) => {
+                e.preventDefault(); // Prevent double-tap zoom
+                toggleSquare(index);
+              }}
               className={`
-                aspect-square cursor-pointer border-2 rounded transition-all flex items-center justify-center bg-gray-100 overflow-hidden
+                aspect-square border-2 rounded transition-all flex items-center justify-center bg-gray-100 overflow-hidden
+                touch-manipulation select-none
+                ${!imagesLoaded ? 'cursor-wait' : 'cursor-pointer'}
                 ${selectedSquares.has(index) 
                   ? 'border-blue-500 ring-2 ring-blue-200' 
                   : 'border-gray-300 hover:border-gray-400'
                 }
               `}
+              style={{ touchAction: 'manipulation' }}
             >
               <div className="relative w-full h-full flex items-center justify-center p-2">
                 {item.startsWith('/') ? (
@@ -304,12 +345,13 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
                     alt={`Image ${index + 1}`}
                     width={120}
                     height={120}
-                    className="max-w-full max-h-full object-contain rounded"
+                    className="max-w-full max-h-full object-contain rounded pointer-events-none"
                     draggable={false}
+                    onLoad={handleImageLoad}
                   />
                 ) : (
                   // Display emoji
-                  <span className="text-4xl">{item}</span>
+                  <span className="text-4xl pointer-events-none select-none">{item}</span>
                 )}
                 {selectedSquares.has(index) && (
                   <div className="absolute inset-0 flex items-center justify-center bg-blue-500 bg-opacity-30 rounded">
@@ -323,42 +365,43 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
           ))}
         </div>
 
-        {/* Checkbox (only on first stage) */}
-        {stage === 'daryls' && (
-          <div className="mb-4">
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isHumanChecked}
-                onChange={(e) => setIsHumanChecked(e.target.checked)}
-                className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">I&apos;m not a robot</span>
-            </label>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="flex justify-between items-center">
-          <button 
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-          >
-            Skip
-          </button>
-          <div className="flex items-center text-xs text-gray-500">
-            <div className="w-4 h-4 mr-1">
-              <svg fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
+          {/* Checkbox (only on first stage) */}
+          {stage === 'daryls' && (
+            <div className="mb-4">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isHumanChecked}
+                  onChange={(e) => setIsHumanChecked(e.target.checked)}
+                  className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">I&apos;m not a robot</span>
+              </label>
             </div>
-            reCAPTCHA
+          )}
+
+          {/* Footer */}
+          <div className="flex justify-between items-center">
+            <button 
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              Skip
+            </button>
+            <div className="flex items-center text-xs text-gray-500">
+              <div className="w-4 h-4 mr-1">
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              reCAPTCHA
+            </div>
+            <button 
+              onClick={handleVerify}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium"
+            >
+              Verify
+            </button>
           </div>
-          <button 
-            onClick={handleVerify}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium"
-          >
-            Verify
-          </button>
         </div>
       </div>
     </div>
