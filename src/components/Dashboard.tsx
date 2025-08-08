@@ -284,7 +284,7 @@ const Dashboard = () => {
                 } whitespace-nowrap py-2 px-2 sm:py-4 sm:px-8 border-b-2 font-medium transition-colors duration-200 rounded-t-lg min-w-0 flex-shrink-0`}
               >
                 <div className="flex flex-col items-center">
-                  <span className="font-bold text-xs sm:text-lg">{tab.label}</span>
+                  <span className="font-bold text-sm sm:text-lg">{tab.label}</span>
                 </div>
               </button>
             ))}

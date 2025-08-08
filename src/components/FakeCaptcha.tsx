@@ -15,6 +15,7 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
   const [timeLeft, setTimeLeft] = useState(5);
   const [preloadedData, setPreloadedData] = useState<unknown>(null);
   const [isJeffSpinning, setIsJeffSpinning] = useState(false);
+  const [selectedJeffImage, setSelectedJeffImage] = useState<string>('');
 
   // Real Daryl and Larry images
   const darylImages = [
@@ -22,11 +23,17 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
   ];
   
   const larryImages = [
-    '/larry-1.png', '/larry-2.png', '/larry-3.png', '/larry-4.jpeg', '/larry-5.png', '/larry-6.png', '/larry-7.png', '🤗', '😌'
+    '/larry-1.png', '/larry-2.png', '/larry-3.png', '/larry-4.jpeg', '/larry-5.png', '/larry-6.png', '/larry-7.png', '/larry-8.jpeg', '/larry-9.png'
   ];
 
   const currentImages = stage === 'daryls' ? darylImages : larryImages;
-  const currentText = stage === 'daryls' ? 'Select all the Daryls you see' : 'Select all the Larrys you see';
+  const currentTarget = stage === 'daryls' ? 'Daryls' : 'Larrys';
+  
+  // Random Jeff image selection
+  const getRandomJeffImage = () => {
+    const jeffImages = ['/jeff.jpeg', '/jeff-2.jpeg'];
+    return jeffImages[Math.floor(Math.random() * jeffImages.length)];
+  };
 
   // Timer for static effect and preload data
   useEffect(() => {
@@ -34,6 +41,7 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
     } else if (stage === 'static' && timeLeft === 0) {
+      setSelectedJeffImage(getRandomJeffImage());
       setStage('jeff');
     }
   }, [timeLeft, stage]);
@@ -90,24 +98,26 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
         onClick={handleJeffClick}
       >
         <div 
-          className={`relative w-full h-full flex items-center justify-center ${
+          className={`relative w-full h-full flex items-center justify-center p-4 ${
             isJeffSpinning ? 'animate-spin' : ''
           }`}
           style={{
             animation: isJeffSpinning ? 'jeffSpinOut 1s ease-in forwards' : 'none'
           }}
         >
-          <Image
-            src="/jeff.jpeg"
-            alt="Jeff Jump Scare"
-            fill
-            className="object-cover"
-            style={{
-              opacity: isJeffSpinning ? 0 : 1,
-              transition: isJeffSpinning ? 'opacity 1s ease-in' : 'none'
-            }}
-            priority
-          />
+          <div className="relative w-full h-full border-8 border-black">
+            <Image
+              src={selectedJeffImage}
+              alt="Jeff Jump Scare"
+              fill
+              className="object-cover"
+              style={{
+                opacity: isJeffSpinning ? 0 : 1,
+                transition: isJeffSpinning ? 'opacity 1s ease-in' : 'none'
+              }}
+              priority
+            />
+          </div>
         </div>
       </div>
     );
@@ -267,7 +277,8 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
       <div className="bg-white rounded-lg shadow-2xl p-6 max-w-lg w-full">
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{currentText}</h1>
+          <div className="text-sm text-gray-700 mb-2">Select all the images with</div>
+          <h1 className="text-xl font-bold text-gray-900 mb-4">{currentTarget}</h1>
           <p className="text-sm text-gray-500">If there are none, click verify</p>
         </div>
 
