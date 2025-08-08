@@ -48,7 +48,7 @@ const Dashboard = () => {
         // Use preloaded data if available, otherwise load from server
         let data;
         if (preloadedData) {
-          data = preloadedData;
+          data = preloadedData as TournamentData;
         } else {
           data = await loadTournamentData();
         }

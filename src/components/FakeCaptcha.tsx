@@ -329,7 +329,7 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
                 onChange={(e) => setIsHumanChecked(e.target.checked)}
                 className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-700">I'm not a robot</span>
+              <span className="text-sm text-gray-700">I&apos;m not a robot</span>
             </label>
           </div>
         )}
