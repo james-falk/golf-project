@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { loadTournamentData } from '@/utils/storage';
 
 interface FakeCaptchaProps {
@@ -294,9 +295,11 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
               <div className="relative w-full h-full flex items-center justify-center p-2">
                 {item.startsWith('/') ? (
                   // Display image file - smaller and contained
-                  <img 
+                  <Image 
                     src={item} 
                     alt={`Image ${index + 1}`}
+                    width={120}
+                    height={120}
                     className="max-w-full max-h-full object-contain rounded"
                     draggable={false}
                   />
