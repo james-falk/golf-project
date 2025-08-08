@@ -18,7 +18,6 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
   const [selectedJeffImage, setSelectedJeffImage] = useState<string>('');
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   // Real Daryl and Larry images
   const darylImages = [
@@ -64,10 +63,7 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
     }
   }, [stage, preloadedData]);
 
-  // Detect touch device
-  useEffect(() => {
-    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  }, []);
+
 
   // Reset image loading state when stage changes
   useEffect(() => {
@@ -327,12 +323,11 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
           {currentImages.map((item, index) => (
             <div
               key={index}
-              onClick={isTouchDevice ? undefined : () => toggleSquare(index)}
-              onTouchEnd={isTouchDevice ? (e) => {
+              onPointerDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 toggleSquare(index);
-              } : undefined}
+              }}
               className={`
                 aspect-square border-2 rounded transition-all flex items-center justify-center bg-gray-100 overflow-hidden
                 touch-manipulation select-none
