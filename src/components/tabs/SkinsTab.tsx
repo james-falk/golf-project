@@ -11,7 +11,11 @@ interface SkinsTabProps {
 }
 
 const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadOnly = false }) => {
-  const players = roundData.skinsGame.players;
+  // Sort players by group rating (A, B, C, D)
+  const players = [...roundData.skinsGame.players].sort((a, b) => {
+    const groupOrder = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
+    return groupOrder[a.group] - groupOrder[b.group];
+  });
   const scores = roundData.skinsGame.scores;
   const potPerHole = roundData.skinsGame.potPerHole;
   const skinResults = roundData.skinsGame.skinResults;
