@@ -30,6 +30,26 @@ if (isRedisAvailable()) {
 // GET - Load tournament data
 export async function GET(request: NextRequest) {
   try {
+    // TEMPORARY: Force refresh with updated player groups
+    console.log('TEMPORARY: Forcing fresh data load with updated player groups');
+    
+    if (isKVAvailable()) {
+      console.log('Updating KV cache with fresh initial data...');
+      await kv.set(TOURNAMENT_DATA_KEY, initialTournamentData);
+      return NextResponse.json(initialTournamentData);
+    } else if (isRedisAvailable() && redisClient) {
+      console.log('Updating Redis cache with fresh initial data...');
+      if (!redisClient.isOpen) {
+        await redisClient.connect();
+      }
+      await redisClient.set(TOURNAMENT_DATA_KEY, JSON.stringify(initialTournamentData));
+      return NextResponse.json(initialTournamentData);
+    } else {
+      console.log('Using fresh initial data (no cache available)');
+      return NextResponse.json(initialTournamentData);
+    }
+    
+    /* ORIGINAL CODE - COMMENTED OUT TEMPORARILY
     const { searchParams } = new URL(request.url);
     const clearCache = searchParams.get('clearCache') === 'true';
     
@@ -84,6 +104,7 @@ export async function GET(request: NextRequest) {
       console.log('Neither KV nor Redis available, using fallback cache');
       return NextResponse.json(fallbackCache);
     }
+    */
   } catch (error) {
     console.error('Error loading tournament data:', error);
     // Return fallback cache if there's an error
