@@ -30,44 +30,54 @@ if (isRedisAvailable()) {
 // GET - Load tournament data
 export async function GET(request: NextRequest) {
   try {
-    // TEMPORARY: Force refresh with updated player groups
-    console.log('TEMPORARY: Forcing fresh data load with updated player groups');
-    
-    if (isKVAvailable()) {
-      console.log('Updating KV cache with fresh initial data...');
-      await kv.set(TOURNAMENT_DATA_KEY, initialTournamentData);
-      return NextResponse.json(initialTournamentData);
-    } else if (isRedisAvailable() && redisClient) {
-      console.log('Updating Redis cache with fresh initial data...');
-      if (!redisClient.isOpen) {
-        await redisClient.connect();
-      }
-      await redisClient.set(TOURNAMENT_DATA_KEY, JSON.stringify(initialTournamentData));
-      return NextResponse.json(initialTournamentData);
-    } else {
-      console.log('Using fresh initial data (no cache available)');
-      return NextResponse.json(initialTournamentData);
-    }
-    
-    /* ORIGINAL CODE - COMMENTED OUT TEMPORARILY
     const { searchParams } = new URL(request.url);
-    const clearCache = searchParams.get('clearCache') === 'true';
+    const updatePlayerGroups = searchParams.get('updatePlayerGroups') === 'true';
     
     if (isKVAvailable()) {
       console.log('Loading tournament data from Vercel KV...');
       
-      if (clearCache) {
-        console.log('Cache clear requested, forcing reload with initial data');
-        await kv.set(TOURNAMENT_DATA_KEY, initialTournamentData);
-        return NextResponse.json(initialTournamentData);
-      }
-      
       // Try to get data from KV storage
-      const storedData = await kv.get(TOURNAMENT_DATA_KEY);
+      const storedData = await kv.get(TOURNAMENT_DATA_KEY) as TournamentData | null;
       
-      if (storedData) {
+      if (storedData && updatePlayerGroups) {
+        console.log('Updating player groups in existing data...');
+        // Update player groups while preserving all other data (scores, etc.)
+        const updatedData = {
+          ...storedData,
+          rounds: storedData.rounds.map(round => ({
+            ...round,
+            skinsGame: {
+              ...round.skinsGame,
+              players: round.skinsGame.players.map(player => {
+                // Update Maxwell and Bryce groups, keep everything else
+                if (player.name === 'Maxwell') {
+                  return { ...player, group: 'C' as const };
+                } else if (player.name === 'Bryce') {
+                  return { ...player, group: 'B' as const };
+                }
+                return player;
+              })
+            },
+            closestToPinGame: {
+              ...round.closestToPinGame,
+              players: round.closestToPinGame.players.map(player => {
+                // Update Maxwell and Bryce groups, keep everything else
+                if (player.name === 'Maxwell') {
+                  return { ...player, group: 'C' as const };
+                } else if (player.name === 'Bryce') {
+                  return { ...player, group: 'B' as const };
+                }
+                return player;
+              })
+            }
+          }))
+        };
+        
+        await kv.set(TOURNAMENT_DATA_KEY, updatedData);
+        return NextResponse.json(updatedData);
+      } else if (storedData) {
         console.log('Tournament data found in KV storage');
-        return NextResponse.json(storedData as TournamentData);
+        return NextResponse.json(storedData);
       } else {
         console.log('No data found in KV, initializing with default data');
         // Initialize KV with default data
@@ -82,21 +92,49 @@ export async function GET(request: NextRequest) {
         await redisClient.connect();
       }
       
-      if (clearCache) {
-        console.log('Cache clear requested, forcing reload with initial data');
-        await redisClient.set(TOURNAMENT_DATA_KEY, JSON.stringify(initialTournamentData));
-        return NextResponse.json(initialTournamentData);
-      }
-      
       // Try to get data from Redis
-      const storedData = await redisClient.get(TOURNAMENT_DATA_KEY);
+      const storedDataString = await redisClient.get(TOURNAMENT_DATA_KEY);
+      const storedData = storedDataString ? JSON.parse(storedDataString) as TournamentData : null;
       
-      if (storedData) {
+      if (storedData && updatePlayerGroups) {
+        console.log('Updating player groups in existing Redis data...');
+        // Same logic as KV - update player groups while preserving scores
+        const updatedData = {
+          ...storedData,
+          rounds: storedData.rounds.map(round => ({
+            ...round,
+            skinsGame: {
+              ...round.skinsGame,
+              players: round.skinsGame.players.map(player => {
+                if (player.name === 'Maxwell') {
+                  return { ...player, group: 'C' as const };
+                } else if (player.name === 'Bryce') {
+                  return { ...player, group: 'B' as const };
+                }
+                return player;
+              })
+            },
+            closestToPinGame: {
+              ...round.closestToPinGame,
+              players: round.closestToPinGame.players.map(player => {
+                if (player.name === 'Maxwell') {
+                  return { ...player, group: 'C' as const };
+                } else if (player.name === 'Bryce') {
+                  return { ...player, group: 'B' as const };
+                }
+                return player;
+              })
+            }
+          }))
+        };
+        
+        await redisClient.set(TOURNAMENT_DATA_KEY, JSON.stringify(updatedData));
+        return NextResponse.json(updatedData);
+      } else if (storedData) {
         console.log('Tournament data found in Redis');
-        return NextResponse.json(JSON.parse(storedData) as TournamentData);
+        return NextResponse.json(storedData);
       } else {
         console.log('No data found in Redis, initializing with default data');
-        // Initialize Redis with default data
         await redisClient.set(TOURNAMENT_DATA_KEY, JSON.stringify(initialTournamentData));
         return NextResponse.json(initialTournamentData);
       }
@@ -104,7 +142,6 @@ export async function GET(request: NextRequest) {
       console.log('Neither KV nor Redis available, using fallback cache');
       return NextResponse.json(fallbackCache);
     }
-    */
   } catch (error) {
     console.error('Error loading tournament data:', error);
     // Return fallback cache if there's an error
