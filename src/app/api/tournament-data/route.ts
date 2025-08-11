@@ -28,10 +28,19 @@ if (isRedisAvailable()) {
 }
 
 // GET - Load tournament data
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const clearCache = searchParams.get('clearCache') === 'true';
+    
     if (isKVAvailable()) {
       console.log('Loading tournament data from Vercel KV...');
+      
+      if (clearCache) {
+        console.log('Cache clear requested, forcing reload with initial data');
+        await kv.set(TOURNAMENT_DATA_KEY, initialTournamentData);
+        return NextResponse.json(initialTournamentData);
+      }
       
       // Try to get data from KV storage
       const storedData = await kv.get(TOURNAMENT_DATA_KEY);
@@ -51,6 +60,12 @@ export async function GET() {
       // Connect to Redis if not connected
       if (!redisClient.isOpen) {
         await redisClient.connect();
+      }
+      
+      if (clearCache) {
+        console.log('Cache clear requested, forcing reload with initial data');
+        await redisClient.set(TOURNAMENT_DATA_KEY, JSON.stringify(initialTournamentData));
+        return NextResponse.json(initialTournamentData);
       }
       
       // Try to get data from Redis
