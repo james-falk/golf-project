@@ -12,7 +12,7 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
   const [selectedSquares, setSelectedSquares] = useState<Set<number>>(new Set());
   const [stage, setStage] = useState<'daryls' | 'larrys' | 'static' | 'jeff'>('daryls');
   const [isHumanChecked, setIsHumanChecked] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(3);
   const [preloadedData, setPreloadedData] = useState<unknown>(null);
   const [isJeffSpinning, setIsJeffSpinning] = useState(false);
   const [selectedJeffImage, setSelectedJeffImage] = useState<string>('');
@@ -21,11 +21,11 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
 
   // Real Daryl and Larry images
   const darylImages = [
-    '/daryl-1.png', '/daryl-2.png', '/daryl-3.png', '/darly-4.png', '/daryl-5.png', '/daryl-6.png', '/daryl-7.jpeg', '/daryl-8.png', '/daryl-9.png'
+    '/daryl-1.png', '/daryl-2.png', '/daryl-3.png', '/darly-4.png', '/daryl-5.jpeg', '/daryl-6.png', '/daryl-7.jpeg', '/daryl-8.png', '/daryl-9.png'
   ];
   
   const larryImages = [
-    '/larry-1.png', '/larry-2.png', '/larry-3.png', '/larry-4.jpeg', '/larry-5.png', '/larry-6.png', '/larry-7.png', '/larry-8.jpeg', '/larry-9.png'
+    '/larry-1.png', '/larry-2.png', '/larry-3.png', '/larry-4.png', '/larry-5.png', '/larry-6.png', '/larry-7.png', '/larry-8.jpeg', '/larry-9.png'
   ];
 
   const currentImages = stage === 'daryls' ? darylImages : larryImages;
@@ -336,11 +336,11 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
                 toggleSquare(index);
               }}
               className={`
-                aspect-square border-2 rounded transition-all flex items-center justify-center bg-gray-100 overflow-hidden
+                aspect-square border-2 rounded transition-all duration-200 flex items-center justify-center bg-gray-100 overflow-hidden
                 touch-manipulation select-none
                 ${!imagesLoaded ? 'cursor-wait' : 'cursor-pointer'}
                 ${selectedSquares.has(index) 
-                  ? 'border-blue-500 ring-2 ring-blue-200' 
+                  ? 'border-blue-500 border-4 ring-2 ring-blue-300 shadow-lg transform scale-105' 
                   : 'border-gray-300 hover:border-gray-400'
                 }
               `}
@@ -363,8 +363,8 @@ const FakeCaptcha: React.FC<FakeCaptchaProps> = ({ onComplete }) => {
                   <span className="text-4xl pointer-events-none select-none">{item}</span>
                 )}
                 {selectedSquares.has(index) && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-blue-500 bg-opacity-30 rounded">
-                    <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="absolute top-1 right-1 bg-blue-500 rounded-full p-1 shadow-md animate-bounce">
+                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>

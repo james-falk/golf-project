@@ -95,13 +95,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onCodeSubmit }) => {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={!code.trim()}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center"
-            >
-              Come On In Big Boy
-            </button>
+            {code.trim() && (
+              <button
+                type="submit"
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center"
+              >
+                Come On In Big Boy
+              </button>
+            )}
           </form>
         </div>
       </div>
