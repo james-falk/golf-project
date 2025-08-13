@@ -19,13 +19,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onCodeSubmit }) => {
     setError('');
 
     // Simple code validation - you can modify these codes as needed
-    const ADMIN_CODE = 'ADMIN';
-    const VIEWER_CODE = 'USER';
+    const ADMIN_CODE = 'MANGOS';
+    const VIEWER_CODE = 'OTSEGO';
 
-    if (code.toUpperCase() === ADMIN_CODE) {
+    // Remove spaces and convert to uppercase for comparison
+    const cleanCode = code.replace(/\s+/g, '').toUpperCase();
+
+    if (cleanCode === ADMIN_CODE) {
       // Admin goes straight to dashboard - no CAPTCHA
       onCodeSubmit(code, 'admin');
-    } else if (code.toUpperCase() === VIEWER_CODE) {
+    } else if (cleanCode === VIEWER_CODE) {
       // Users go through CAPTCHA flow
       setPendingRole('viewer');
       setShowCaptcha(true);
