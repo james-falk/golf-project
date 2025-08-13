@@ -7,7 +7,7 @@ import { createClient } from 'redis';
 const TOURNAMENT_DATA_KEY = 'golf-tournament-data';
 
 // Fallback in-memory storage when neither KV nor Redis is available
-let fallbackCache: TournamentData = initialTournamentData;
+let fallbackCache: TournamentData | null = null;
 
 // Check if Vercel KV is properly configured
 function isKVAvailable(): boolean {
@@ -51,9 +51,9 @@ export async function GET(request: NextRequest) {
               players: round.skinsGame.players.map(player => {
                 // Update Maxwell and Bryce groups, keep everything else
                 if (player.name === 'Maxwell') {
-                  return { ...player, group: 'C' as const };
+                  return { ...player, group: 'D' as const };
                 } else if (player.name === 'Bryce') {
-                  return { ...player, group: 'B' as const };
+                  return { ...player, group: 'C' as const };
                 }
                 return player;
               })
@@ -63,9 +63,9 @@ export async function GET(request: NextRequest) {
               players: round.closestToPinGame.players.map(player => {
                 // Update Maxwell and Bryce groups, keep everything else
                 if (player.name === 'Maxwell') {
-                  return { ...player, group: 'C' as const };
+                  return { ...player, group: 'D' as const };
                 } else if (player.name === 'Bryce') {
-                  return { ...player, group: 'B' as const };
+                  return { ...player, group: 'C' as const };
                 }
                 return player;
               })
@@ -140,12 +140,17 @@ export async function GET(request: NextRequest) {
       }
     } else {
       console.log('Neither KV nor Redis available, using fallback cache');
+      // If fallbackCache is null or we want to refresh from file, use initialTournamentData
+      if (!fallbackCache) {
+        console.log('Initializing fallback cache from file data');
+        fallbackCache = initialTournamentData;
+      }
       return NextResponse.json(fallbackCache);
     }
   } catch (error) {
     console.error('Error loading tournament data:', error);
     // Return fallback cache if there's an error
-    return NextResponse.json(fallbackCache);
+    return NextResponse.json(fallbackCache || initialTournamentData);
   }
 }
 
@@ -195,6 +200,50 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error saving tournament data:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Clear cache and reload from file (admin only)
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { userRole } = body;
+    
+    console.log('Attempting to clear cache for user role:', userRole);
+    
+    // Check if user has admin privileges
+    if (userRole !== 'admin') {
+      console.log('Unauthorized cache clear attempt');
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin access required.' },
+        { status: 403 }
+      );
+    }
+    
+    if (isKVAvailable()) {
+      // Clear KV storage
+      await kv.del(TOURNAMENT_DATA_KEY);
+      console.log('Tournament data cleared from Vercel KV');
+    } else if (isRedisAvailable() && redisClient) {
+      // Clear Redis storage
+      if (!redisClient.isOpen) {
+        await redisClient.connect();
+      }
+      await redisClient.del(TOURNAMENT_DATA_KEY);
+      console.log('Tournament data cleared from Redis');
+    } else {
+      // Clear fallback cache
+      fallbackCache = null;
+      console.log('Fallback cache cleared');
+    }
+    
+    return NextResponse.json({ success: true, message: 'Cache cleared successfully' });
+  } catch (error) {
+    console.error('Error clearing cache:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
