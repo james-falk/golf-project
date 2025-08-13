@@ -96,7 +96,7 @@ export const calculatePlayerScrambleWinnings = (playerId: string, round: RoundDa
   const playerCount = getTeamPlayerCount(playerTeam);
   const rank = sortedResults.findIndex(result => result.teamId === playerTeam.id) + 1;
   
-  return Math.round(calculatePerPlayerWinnings(rank, playerCount, tieInfo) * 100) / 100;
+  return Math.floor(calculatePerPlayerWinnings(rank, playerCount, tieInfo));
 };
 
 /**

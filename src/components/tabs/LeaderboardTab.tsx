@@ -223,7 +223,7 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
                   } ${
                     player.totalWinnings > 0 ? 'text-green-600' : 'text-gray-400'
                   }`}>
-                    ${Math.round(player.totalWinnings)}
+                    ${Math.floor(player.totalWinnings)}
                   </div>
                   {index === 0 && player.totalWinnings > 0 && (
                     <div className="text-xs text-yellow-600 font-medium">👑 Champion</div>
@@ -288,19 +288,19 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
                         }`}>{player.name}</td>
                         <td className={`text-right text-gray-700 ${
                           false ? 'py-2 px-2 text-xs' : 'py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm'
-                        }`}>${Math.round(skinsTotal)}</td>
+                        }`}>${Math.floor(skinsTotal)}</td>
                         <td className={`text-right text-gray-700 ${
                           false ? 'py-2 px-2 text-xs' : 'py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm'
-                        }`}>${Math.round(ctpTotal)}</td>
+                        }`}>${Math.floor(ctpTotal)}</td>
                         {(activePayoutTab === 'friday' || activePayoutTab === 'saturday' || activePayoutTab === 'total') && (
                           <td className={`text-right text-gray-700 ${
                             false ? 'py-2 px-2 text-xs' : 'py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm'
-                          }`}>${Math.round(scrambleTotal)}</td>
+                          }`}>${Math.floor(scrambleTotal)}</td>
                         )}
                         <td className={`text-right font-bold text-green-600 border-l border-gray-200 ${
                           false ? 'py-2 px-2 text-xs' : 'py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm'
                         }`}>
-                          ${Math.round(player.totalWinnings)}
+                          ${Math.floor(player.totalWinnings)}
                         </td>
                       </tr>
                     );
