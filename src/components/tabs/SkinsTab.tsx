@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Player, SkinScore, RoundData } from '@/types/golf';
 import { demoCourse } from '@/data/demoData';
 
@@ -11,11 +11,13 @@ interface SkinsTabProps {
 }
 
 const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadOnly = false }) => {
-  // Sort players by group rating (A, B, C, D)
-  const players = [...roundData.skinsGame.players].sort((a, b) => {
-    const groupOrder = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
-    return groupOrder[a.group] - groupOrder[b.group];
-  });
+  // Sort players by group rating (A, B, C, D) - memoized to prevent infinite loops
+  const players = useMemo(() => {
+    return [...roundData.skinsGame.players].sort((a, b) => {
+      const groupOrder = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
+      return groupOrder[a.group] - groupOrder[b.group];
+    });
+  }, [roundData.skinsGame.players]);
   const scores = roundData.skinsGame.scores;
   const potPerHole = roundData.skinsGame.potPerHole;
   const skinResults = roundData.skinsGame.skinResults;
@@ -117,7 +119,7 @@ const SkinsTab: React.FC<SkinsTabProps> = ({ roundData, updateRoundData, isReadO
         potPerHole: potPerSkin // Update the display value
       }
     }));
-  }, [players, scores, roundData.skinsGame.totalPot, updateRoundData]);
+  }, [players, scores, roundData.skinsGame.totalPot]);
 
   // Helper function to check if a player gets a stroke on a specific hole
   const getStrokesOnHole = (playerGroup: 'A' | 'B' | 'C' | 'D', holeNumber: number): number => {

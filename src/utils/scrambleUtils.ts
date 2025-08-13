@@ -9,15 +9,35 @@ export const getTeamPlayerCount = (team: ScrambleTeam): number => {
 
 /**
  * Calculate per-player winnings for a team based on rank and team size
+ * This function handles tie-splitting logic
  */
-export const calculatePerPlayerWinnings = (rank: number, playerCount: number): number => {
+export const calculatePerPlayerWinnings = (rank: number, playerCount: number, tieInfo?: { position: number; tiedTeams: number; }): number => {
   if (playerCount === 0) return 0;
   
-  if (rank === 1) {
-    return 280 / playerCount; // First place: $280 divided by team size
-  } else if (rank === 2) {
-    return 80 / playerCount; // Second place: $80 divided by team size
+  // If no tie info provided, use legacy logic for backward compatibility
+  if (!tieInfo) {
+    if (rank === 1) {
+      return 280 / playerCount; // First place: $280 divided by team size
+    } else if (rank === 2) {
+      return 80 / playerCount; // Second place: $80 divided by team size
+    }
+    return 0;
   }
+
+  const { position, tiedTeams } = tieInfo;
+  
+  if (position === 1) {
+    // Tied for first place - split the entire pot ($360)
+    const totalPot = 360;
+    const potPerTeam = totalPot / tiedTeams;
+    return potPerTeam / playerCount;
+  } else if (position === 2) {
+    // Tied for second place - first place gets $280, split remaining $80
+    const secondPlacePot = 80;
+    const potPerTeam = secondPlacePot / tiedTeams;
+    return potPerTeam / playerCount;
+  }
+  
   return 0;
 };
 
@@ -38,16 +58,40 @@ export const calculatePlayerScrambleWinnings = (playerId: string, round: RoundDa
   const teamResult = scrambleGame.results.find(result => result.teamId === playerTeam.id);
   if (!teamResult || teamResult.totalScore === 0) return 0;
   
-  // Find the rank by sorting results and finding position
+  // Get sorted results for tie detection
   const sortedResults = scrambleGame.results
     .filter(result => result.totalScore > 0)
     .sort((a, b) => a.totalScore - b.totalScore);
   
-  const rank = sortedResults.findIndex(result => result.teamId === playerTeam.id) + 1;
+  // Find this team's score
+  const teamScore = teamResult.totalScore;
+  
+  // Detect ties and calculate position
+  const firstPlaceScore = sortedResults[0]?.totalScore;
+  const firstPlaceTeams = sortedResults.filter(r => r.totalScore === firstPlaceScore);
+  
+  let tieInfo: { position: number; tiedTeams: number; } | undefined;
+  
+  if (teamScore === firstPlaceScore) {
+    // Team is tied for first place - they split the entire $360 pot
+    tieInfo = { position: 1, tiedTeams: firstPlaceTeams.length };
+  } else {
+    // Only pay second place if there's exactly one first place team
+    if (firstPlaceTeams.length === 1) {
+      const secondPlaceScore = sortedResults.find(r => r.totalScore > firstPlaceScore)?.totalScore;
+      if (teamScore === secondPlaceScore) {
+        const secondPlaceTeams = sortedResults.filter(r => r.totalScore === secondPlaceScore);
+        tieInfo = { position: 2, tiedTeams: secondPlaceTeams.length };
+      }
+    }
+    // If multiple teams tied for first, no second place payout
+  }
   
   // Calculate per-player winnings
   const playerCount = getTeamPlayerCount(playerTeam);
-  return calculatePerPlayerWinnings(rank, playerCount);
+  const rank = sortedResults.findIndex(result => result.teamId === playerTeam.id) + 1;
+  
+  return Math.round(calculatePerPlayerWinnings(rank, playerCount, tieInfo) * 100) / 100;
 };
 
 /**

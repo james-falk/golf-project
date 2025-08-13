@@ -223,7 +223,7 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
                   } ${
                     player.totalWinnings > 0 ? 'text-green-600' : 'text-gray-400'
                   }`}>
-                    ${player.totalWinnings}
+                    ${Math.round(player.totalWinnings)}
                   </div>
                   {index === 0 && player.totalWinnings > 0 && (
                     <div className="text-xs text-yellow-600 font-medium">👑 Champion</div>
@@ -265,7 +265,7 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
                     // Calculate individual game winnings for the selected period
                     let skinsTotal = 0;
                     let ctpTotal = 0;
-                    const scrambleTotal = 0;
+                    let scrambleTotal = 0;
 
                     currentData.rounds.forEach(round => {
                       // Skins
@@ -277,7 +277,8 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
                       ctpTotal += round.closestToPinGame.holes
                         .filter(hole => hole.winner === player.id).length * 20;
                       
-                      // Scramble (TODO: implement when scramble structure is ready)
+                      // Scramble
+                      scrambleTotal += calculatePlayerScrambleWinnings(player.id, round);
                     });
 
                     return (
@@ -287,19 +288,19 @@ const LeaderboardTab: React.FC<LeaderboardTabProps> = ({ tournamentData }) => {
                         }`}>{player.name}</td>
                         <td className={`text-right text-gray-700 ${
                           false ? 'py-2 px-2 text-xs' : 'py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm'
-                        }`}>${skinsTotal}</td>
+                        }`}>${Math.round(skinsTotal)}</td>
                         <td className={`text-right text-gray-700 ${
                           false ? 'py-2 px-2 text-xs' : 'py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm'
-                        }`}>${ctpTotal}</td>
+                        }`}>${Math.round(ctpTotal)}</td>
                         {(activePayoutTab === 'friday' || activePayoutTab === 'saturday' || activePayoutTab === 'total') && (
                           <td className={`text-right text-gray-700 ${
                             false ? 'py-2 px-2 text-xs' : 'py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm'
-                          }`}>${scrambleTotal}</td>
+                          }`}>${Math.round(scrambleTotal)}</td>
                         )}
                         <td className={`text-right font-bold text-green-600 border-l border-gray-200 ${
                           false ? 'py-2 px-2 text-xs' : 'py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm'
                         }`}>
-                          ${player.totalWinnings}
+                          ${Math.round(player.totalWinnings)}
                         </td>
                       </tr>
                     );

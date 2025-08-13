@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { ScrambleTeam, ScrambleScore, RoundData } from '@/types/golf';
-import { getTeamPlayerCount as utilGetTeamPlayerCount, calculatePerPlayerWinnings as utilCalculatePerPlayerWinnings } from '@/utils/scrambleUtils';
+import { getTeamPlayerCount as utilGetTeamPlayerCount, calculatePerPlayerWinnings } from '@/utils/scrambleUtils';
 import { demoPlayers, demoCourse } from '@/data/demoData';
 
 interface ScrambleTabProps {
@@ -34,7 +34,7 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
         }
       }));
     }
-  }, [teams.length, updateRoundData]);
+  }, [teams.length]);
 
   // Update results in data when teams or scores change
   useEffect(() => {
@@ -70,7 +70,7 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
         results: teamResults
       }
     }));
-  }, [teams, scores, updateRoundData]);
+  }, [teams, scores]);
 
   const updateTeamPlayer = (teamId: string, playerIndex: number, playerId: string | null) => {
     if (isReadOnly) return;
@@ -155,7 +155,7 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
 
   // Use utility functions for consistency
   const getTeamPlayerCount = utilGetTeamPlayerCount;
-  const calculatePerPlayerWinnings = utilCalculatePerPlayerWinnings;
+  // calculatePerPlayerWinnings is now imported directly from utils
 
   const getTotalPar = (holes: number): number => {
     return demoCourse.holes.slice(0, holes).reduce((sum, hole) => sum + hole.par, 0);
@@ -244,23 +244,62 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
                       <div className="text-sm text-gray-600">
                         {result.totalScore > 0 ? getClassicScoreVsPar(result.totalScore) : 'No score entered'}
                       </div>
-                      {(rank === 1 || rank === 2) && result.totalScore > 0 && (() => {
+                      {result.totalScore > 0 && (() => {
+                        // Check if this team should get a payout
+                        const sortedResults = results.filter(r => r.totalScore > 0);
+                        const teamScore = result.totalScore;
+                        const firstPlaceScore = sortedResults[0]?.totalScore;
+                        const firstPlaceTeams = sortedResults.filter(r => r.totalScore === firstPlaceScore);
+                        
+                        const isFirstPlace = teamScore === firstPlaceScore;
+                        
+                        // Only check for second place if there's exactly one first place team
+                        let isSecondPlace = false;
+                        if (firstPlaceTeams.length === 1) {
+                          const secondPlaceScore = sortedResults.find(r => r.totalScore > firstPlaceScore)?.totalScore;
+                          isSecondPlace = teamScore === secondPlaceScore;
+                        }
+                        
+                        if (!isFirstPlace && !isSecondPlace) return null;
+                        
                         const team = teams.find(t => t.id === result.teamId);
                         const playerCount = team ? getTeamPlayerCount(team) : 0;
-                        const perPlayerWinnings = calculatePerPlayerWinnings(rank, playerCount);
-                        const totalWinnings = rank === 1 ? 280 : 80;
+                        
+                        let tieInfo: { position: number; tiedTeams: number; } | undefined;
+                        let tieText = '';
+                        
+                        if (isFirstPlace) {
+                          tieInfo = { position: 1, tiedTeams: firstPlaceTeams.length };
+                          if (firstPlaceTeams.length > 1) {
+                            tieText = ` (tied with ${firstPlaceTeams.length - 1} other${firstPlaceTeams.length > 2 ? 's' : ''})`;
+                          }
+                        } else if (isSecondPlace) {
+                          const secondPlaceScore = sortedResults.find(r => r.totalScore > firstPlaceScore)?.totalScore;
+                          const secondPlaceTeams = sortedResults.filter(r => r.totalScore === secondPlaceScore);
+                          tieInfo = { position: 2, tiedTeams: secondPlaceTeams.length };
+                          if (secondPlaceTeams.length > 1) {
+                            tieText = ` (tied with ${secondPlaceTeams.length - 1} other${secondPlaceTeams.length > 2 ? 's' : ''})`;
+                          }
+                        }
+                        
+                        const perPlayerWinnings = calculatePerPlayerWinnings(isFirstPlace ? 1 : 2, playerCount, tieInfo);
+                        const potInfo = tieInfo 
+                          ? (tieInfo.position === 1 
+                              ? `$360 ÷ ${tieInfo.tiedTeams} team${tieInfo.tiedTeams !== 1 ? 's' : ''}` 
+                              : `$80 ÷ ${tieInfo.tiedTeams} team${tieInfo.tiedTeams !== 1 ? 's' : ''}`)
+                          : (isFirstPlace ? '$280' : '$80');
                         
                         return (
                           <div className="text-lg font-bold text-green-600 mt-1">
                             {playerCount > 0 ? (
                               <>
-                                ${Math.round(perPlayerWinnings)} per player
+                                ${Math.round(perPlayerWinnings)} per player{tieText}
                                 <div className="text-sm text-gray-600 font-normal">
-                                  (${totalWinnings} ÷ {playerCount} player{playerCount !== 1 ? 's' : ''})
+                                  ({potInfo} ÷ {playerCount} player{playerCount !== 1 ? 's' : ''})
                                 </div>
                               </>
                             ) : (
-                              `Wins $${totalWinnings}`
+                              <>Wins {potInfo}{tieText}</>
                             )}
                           </div>
                         );
