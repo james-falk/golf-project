@@ -27,10 +27,15 @@ export const calculatePerPlayerWinnings = (rank: number, playerCount: number, ti
   const { position, tiedTeams } = tieInfo;
   
   if (position === 1) {
-    // Tied for first place - split the entire pot ($360)
-    const totalPot = 360;
-    const potPerTeam = totalPot / tiedTeams;
-    return potPerTeam / playerCount;
+    if (tiedTeams === 1) {
+      // Outright winner - gets $280 first place pot
+      return 280 / playerCount;
+    } else {
+      // Multiple teams tied for first place - split the entire pot ($360)
+      const totalPot = 360;
+      const potPerTeam = totalPot / tiedTeams;
+      return potPerTeam / playerCount;
+    }
   } else if (position === 2) {
     // Tied for second place - first place gets $280, split remaining $80
     const secondPlacePot = 80;

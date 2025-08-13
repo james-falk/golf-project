@@ -285,7 +285,9 @@ const ScrambleTab: React.FC<ScrambleTabProps> = ({ roundData, updateRoundData, i
                         const perPlayerWinnings = calculatePerPlayerWinnings(isFirstPlace ? 1 : 2, playerCount, tieInfo);
                         const potInfo = tieInfo 
                           ? (tieInfo.position === 1 
-                              ? `$360 ÷ ${tieInfo.tiedTeams} team${tieInfo.tiedTeams !== 1 ? 's' : ''}` 
+                              ? (tieInfo.tiedTeams === 1 
+                                  ? '$280' 
+                                  : `$360 ÷ ${tieInfo.tiedTeams} team${tieInfo.tiedTeams !== 1 ? 's' : ''}`)
                               : `$80 ÷ ${tieInfo.tiedTeams} team${tieInfo.tiedTeams !== 1 ? 's' : ''}`)
                           : (isFirstPlace ? '$280' : '$80');
                         
