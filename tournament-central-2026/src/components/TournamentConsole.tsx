@@ -96,18 +96,18 @@ export default function TournamentConsole() {
   };
 
   return (
-    <main className="min-h-screen bg-[#071b18] text-stone-100">
-      <header className="border-b border-white/10 bg-[#092520]">
+    <main className="club-site min-h-screen text-stone-100">
+      <header className="club-masthead">
         <div className="mx-auto max-w-7xl px-5 py-5 sm:px-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-emerald-200">ECBP / 2026</p>
-              <h1 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">East Coast Big Playas — Tournament Central</h1>
+              <p className="club-kicker">Otsego Club · Gaylord, Michigan</p>
+              <h1 className="club-title mt-1">East Coast Big Playas Invitational</h1>
             </div>
-            <div className="rounded-full border border-amber-300/30 bg-amber-100/10 px-3 py-1.5 text-xs font-semibold text-amber-100">Preview workspace · local only</div>
+            <div className="club-badge">Tournament Ledger · 2026</div>
           </div>
-          <nav className="mt-5 flex gap-1 overflow-x-auto pb-1" aria-label="Tournament areas">
-            {tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${tab === item.id ? "bg-emerald-200 text-[#08221d]" : "text-emerald-50/70 hover:bg-white/10 hover:text-white"}`}>{item.label}</button>)}
+          <nav className="club-nav mt-5 flex overflow-x-auto" aria-label="Tournament areas">
+            {tabs.map((item) => <button key={item.id} onClick={() => setTab(item.id)} className={`club-tab whitespace-nowrap ${tab === item.id ? "club-tab-active" : ""}`}>{item.label}</button>)}
           </nav>
         </div>
       </header>
@@ -125,12 +125,12 @@ export default function TournamentConsole() {
 function Central({ players, skinPot, skinWins, perSkin, closestToPin, scrambleResults, teams }: { players: Player[]; skinPot: ReturnType<typeof skinRoundPot>; skinWins: number; perSkin: number; closestToPin: Record<number, string>; scrambleResults: Array<{ teamId: string; total: number }>; teams: ReturnType<typeof makeTeams> }) {
   const scrambleLeader = [...scrambleResults].filter((entry) => entry.total > 0).sort((a, b) => a.total - b.total)[0];
   return <div className="space-y-8">
-    <section className="grid gap-5 rounded-3xl bg-[radial-gradient(ellipse_at_top_left,_#226b57,_#0b2d27_55%,_#071b18)] p-7 shadow-2xl sm:p-10 lg:grid-cols-[1.2fr_0.8fr]">
-      <div><p className="font-mono text-xs uppercase tracking-[0.26em] text-emerald-200">The official live board</p><h2 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-6xl">Scores in.<br />Stories out.</h2><p className="mt-5 max-w-xl text-base leading-7 text-emerald-50/75">Tribute skins in the morning. The Classic scramble in the afternoon. Every board here is wired to the same locked rules engine.</p></div>
+    <section className="club-hero grid gap-5 p-7 sm:p-10 lg:grid-cols-[1.2fr_0.8fr]">
+      <div><p className="club-kicker">The Commissioner&apos;s official board</p><h2 className="club-display mt-4 text-4xl sm:text-6xl">The 2026<br />score ledger.</h2><p className="mt-5 max-w-xl text-base leading-7 text-[#e8ddc2]">The Tribute in the morning. The Classic in the afternoon. Every stroke, skin and dollar is accounted for here.</p></div>
       <div className="grid grid-cols-2 gap-3 self-end"><Stat label="Active players" value={String(players.length)} detail="all-in skins field" /><Stat label="Skins decided" value={String(skinWins)} detail={skinWins ? `$${perSkin} per skin` : "waiting for a unique low net"} /><Stat label="CTP entered" value={`${Object.keys(closestToPin).length}/4`} detail="$20 each" /><Stat label="Classic leader" value={scrambleLeader ? teamName(teams, scrambleLeader.teamId) : "—"} detail={scrambleLeader ? `${scrambleLeader.total} total` : "no team card yet"} /></div>
     </section>
     <section className="grid gap-4 md:grid-cols-3"><Card title="Thursday" detail="The Tribute" body="18-hole skins + closest to pin" /><Card title="Friday" detail="Tribute → Classic" body="Skins + CTP, then 18-hole scramble" /><Card title="Saturday" detail="Tribute → Classic" body="Skins + CTP, then final scramble" /></section>
-    <section className="rounded-3xl bg-[#f4f1e8] p-6 text-[#12332d]"><p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-[#518070]">Today’s money map</p><div className="mt-5 grid gap-6 sm:grid-cols-3"><div><p className="text-3xl font-black">${skinPot.total}</p><p className="mt-1 text-sm text-[#557269]">${20} × {players.length} players</p></div><div><p className="text-3xl font-black">${skinPot.closestToPinTotal}</p><p className="mt-1 text-sm text-[#557269]">four $20 closest-to-pin prizes</p></div><div><p className="text-3xl font-black">${skinPot.skinsTotal}</p><p className="mt-1 text-sm text-[#557269]">split across outright skin winners</p></div></div></section>
+    <section className="club-ledger p-6 text-[#12332d]"><p className="club-ledger-label">The day&apos;s purse</p><div className="mt-5 grid gap-6 sm:grid-cols-3"><div><p className="club-ledger-total">${skinPot.total}</p><p className="mt-1 text-sm text-[#557269]">${20} × {players.length} players</p></div><div><p className="club-ledger-total">${skinPot.closestToPinTotal}</p><p className="mt-1 text-sm text-[#557269]">four $20 closest-to-pin prizes</p></div><div><p className="club-ledger-total">${skinPot.skinsTotal}</p><p className="mt-1 text-sm text-[#557269]">split across outright skin winners</p></div></div></section>
   </div>;
 }
 
@@ -166,8 +166,8 @@ function Desk({ chat, chatInput, setChatInput, answerDesk }: { chat: string[]; c
 
 function ScoreGrid({ course, scores, onChange }: { course: typeof tributeCourse.holes; scores: HoleScore[] | undefined; onChange: (hole: number, value: string) => void }) { return <div className="mt-7 grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-9">{course.map((hole) => { const value = scores?.find((item) => item.holeNumber === hole.number)?.strokes ?? ""; return <label key={hole.number} className="rounded-xl border border-[#d6e2da] bg-[#f6faf7] p-3 text-center"><span className="block text-xs font-bold text-[#57776a]">{hole.number} · P{hole.par}</span><input value={value} inputMode="numeric" onChange={(event) => onChange(hole.number, event.target.value)} className="mt-2 w-full bg-transparent text-center text-xl font-black outline-none" placeholder="—" /></label> })}</div>; }
 function SectionTitle({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) { return <section><p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200">{eyebrow}</p><h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{title}</h2><p className="mt-3 max-w-2xl leading-7 text-stone-300">{text}</p></section>; }
-function Stat({ label, value, detail }: { label: string; value: string; detail: string }) { return <div className="rounded-2xl border border-white/10 bg-black/20 p-4"><p className="font-mono text-[10px] uppercase tracking-[0.15em] text-emerald-200">{label}</p><p className="mt-2 truncate text-xl font-bold">{value}</p><p className="mt-1 text-xs text-stone-400">{detail}</p></div>; }
-function Card({ title, detail, body }: { title: string; detail: string; body: string }) { return <article className="rounded-3xl border border-white/10 bg-white/[0.06] p-5"><p className="font-mono text-xs uppercase tracking-[0.16em] text-emerald-200">{detail}</p><h3 className="mt-2 text-2xl font-black">{title}</h3><p className="mt-3 text-sm leading-6 text-stone-300">{body}</p></article>; }
+function Stat({ label, value, detail }: { label: string; value: string; detail: string }) { return <div className="club-stat p-4"><p>{label}</p><p className="club-stat-value mt-2 truncate">{value}</p><p className="mt-1 text-xs text-[#c5b48f]">{detail}</p></div>; }
+function Card({ title, detail, body }: { title: string; detail: string; body: string }) { return <article className="club-card p-5"><p className="club-kicker">{detail}</p><h3 className="club-card-title mt-2">{title}</h3><p className="mt-3 text-sm leading-6 text-[#d6c9ab]">{body}</p></article>; }
 function sumScores(scores: HoleScore[] | undefined) { return scores?.reduce((sum, score) => sum + score.strokes, 0) ?? 0; }
 function updateHoleScore(scores: HoleScore[] | undefined, holeNumber: number, rawValue: string) { const value = Number(rawValue); const rest = (scores ?? []).filter((score) => score.holeNumber !== holeNumber); return Number.isInteger(value) && value > 0 && value < 20 ? [...rest, { holeNumber, strokes: value }].sort((a, b) => a.holeNumber - b.holeNumber) : rest; }
 function teamName(teams: ReturnType<typeof makeTeams>, teamId: string) { return teams.find((team) => team.id === teamId)?.name ?? "Unknown team"; }
