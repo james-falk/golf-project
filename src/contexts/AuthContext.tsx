@@ -32,6 +32,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [preloadedData, setPreloadedData] = useState<unknown>(null);
+  const isArchiveMode = process.env.NEXT_PUBLIC_ARCHIVE_MODE === 'true';
 
   // Check for existing session on mount
   useEffect(() => {
@@ -60,13 +61,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = (code: string, role: UserRole, preloadedDataParam?: unknown) => {
+    const resolvedRole: UserRole = isArchiveMode ? 'viewer' : role;
     setIsAuthenticated(true);
-    setUserRole(role);
+    setUserRole(resolvedRole);
     setPreloadedData(preloadedDataParam);
     
     // Set session to expire in 24 hours
     const expiryTime = new Date().getTime() + (24 * 60 * 60 * 1000);
-    localStorage.setItem('golf-user-role', role);
+    localStorage.setItem('golf-user-role', resolvedRole);
     localStorage.setItem('golf-session-expiry', expiryTime.toString());
   };
 
