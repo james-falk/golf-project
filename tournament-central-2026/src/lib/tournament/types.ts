@@ -47,6 +47,7 @@ export type SkinResult = {
   winnerId?: string;
   bestNetScore?: number;
   isTie: boolean;
+  isComplete: boolean;
 };
 
 export type TeamResult = {

@@ -9,6 +9,15 @@ export const tributeCourse: Course = {
   ].map(([par, strokeIndex], index) => ({ number: index + 1, par, strokeIndex })),
 };
 
+export const classicCourse: Course = {
+  id: "classic",
+  name: "The Classic — Otsego Club",
+  holes: [
+    [5, 1], [4, 11], [4, 9], [4, 3], [5, 5], [3, 13], [4, 7], [3, 17], [4, 15],
+    [5, 4], [4, 18], [5, 8], [3, 10], [4, 6], [3, 14], [4, 2], [4, 12], [4, 16],
+  ].map(([par, strokeIndex], index) => ({ number: index + 1, par, strokeIndex })),
+};
+
 export const startingRoster: Player[] = [
   ["Steve", "A"], ["John", "A"], ["Roger", "A"], ["Jeff", "A"], ["Ethan", "A"], ["Jim", "A"],
   ["Sam", "B"], ["Thomas", "B"], ["Logan", "B"], ["James", "B"], ["Spencer", "B"], ["Kent", "B"],

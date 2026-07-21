@@ -43,7 +43,9 @@ export function calculateSkins(
         : [];
     });
 
-    if (!contenders.length) return { holeNumber: hole.number, isTie: false };
+    if (contenders.length !== players.length) {
+      return { holeNumber: hole.number, isTie: false, isComplete: false };
+    }
 
     const bestNetScore = Math.min(...contenders.map((entry) => entry.netScore));
     const winners = contenders.filter((entry) => entry.netScore === bestNetScore);
@@ -51,6 +53,7 @@ export function calculateSkins(
       holeNumber: hole.number,
       bestNetScore,
       isTie: winners.length !== 1,
+      isComplete: true,
       winnerId: winners.length === 1 ? winners[0].playerId : undefined,
     };
   });
@@ -63,7 +66,7 @@ export function skinRoundPot(activePlayerCount: number, rules: SkinRoundRules) {
 }
 
 export function payoutPerSkin(activePlayerCount: number, skins: SkinResult[], rules: SkinRoundRules) {
-  const winners = skins.filter((skin) => skin.winnerId).length;
+  const winners = skins.filter((skin) => skin.isComplete && skin.winnerId).length;
   return winners ? Math.round(skinRoundPot(activePlayerCount, rules).skinsTotal / winners) : 0;
 }
 

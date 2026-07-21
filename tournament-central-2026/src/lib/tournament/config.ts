@@ -9,7 +9,7 @@ export const confirmed2026Rules: TournamentRules = {
   },
   scrambleRound: {
     playerEntryFee: 20,
-    teamCount: 5,
+    teamCount: 6,
     teamSize: 4,
     // Preserves 2025's $280 / $80 split when 18 players make a $360 pot.
     firstPlaceShare: 280 / 360,

@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/.playwright-cli/
+/.agents/
+/skills-lock.json
 
 # next.js
 /.next/

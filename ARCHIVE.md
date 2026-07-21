@@ -10,11 +10,12 @@ code or let it overwrite a newer tournament dataset.
 - Checked-in data: `tournament-data.json`
 - SHA-256: `a40897a0a264794fd6087b0939c74e45d0c4d19912f09cf42bdc81166763d052`
 - Last known production deployment: `golf-project-5si5nwbar-james-projects-cf25d43f.vercel.app`
+- Public read-only archive: `https://tournament-archive-2025.vercel.app`
 
-The checked-in snapshot contains partial final-event data. The production API is
-still present but protected by Vercel SSO; when Vercel access is restored, export
-the live `golf-tournament-data` value and preserve it beside this snapshot with
-its retrieval date and checksum. Do not replace this file in place.
+The checked-in snapshot contains partial final-event data. The former production
+API remains protected by Vercel SSO; if that historical store becomes available,
+export the live `golf-tournament-data` value and preserve it beside this snapshot
+with its retrieval date and checksum. Do not replace this file in place.
 
 ## Archive behavior
 

@@ -2,6 +2,15 @@
 -- Score data is stored per player/team and per hole so separate scorekeepers do
 -- not overwrite one another's cards.
 
+-- The first production release stores the complete live ledger atomically in
+-- this compact shared-state table. The normalized tables below remain the
+-- migration target when per-user audit history is enabled.
+create table if not exists tournament_state (
+  id text primary key,
+  payload jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 create table tournaments (
   id uuid primary key,
   name text not null,

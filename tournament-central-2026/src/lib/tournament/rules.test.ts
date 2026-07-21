@@ -22,14 +22,31 @@ describe("2026 confirmed tournament rules", () => {
     const skins = calculateSkins(players, course, {
       a: [{ holeNumber: 1, strokes: 4 }],
       b: [{ holeNumber: 1, strokes: 5 }], // net 4 after a B stroke
+      c: [{ holeNumber: 1, strokes: 7 }],
     }, confirmed2026Rules.skinRound);
-    expect(skins[0]).toMatchObject({ holeNumber: 1, isTie: true });
+    expect(skins[0]).toMatchObject({ holeNumber: 1, isTie: true, isComplete: true });
     expect(skins[0].winnerId).toBeUndefined();
+  });
+
+  it("does not decide a skin until every active player has entered that hole", () => {
+    const incomplete = calculateSkins(players, course, {
+      a: [{ holeNumber: 1, strokes: 4 }],
+      b: [{ holeNumber: 1, strokes: 6 }],
+    }, confirmed2026Rules.skinRound);
+    expect(incomplete[0]).toMatchObject({ holeNumber: 1, isComplete: false });
+    expect(incomplete[0].winnerId).toBeUndefined();
+
+    const skins = calculateSkins(players, course, {
+      a: [{ holeNumber: 1, strokes: 4 }],
+      b: [{ holeNumber: 1, strokes: 6 }],
+      c: [{ holeNumber: 1, strokes: 7 }],
+    }, confirmed2026Rules.skinRound);
+    expect(skins[0]).toMatchObject({ holeNumber: 1, winnerId: "a", isComplete: true, isTie: false });
   });
 
   it("uses the legacy $20 per player money map", () => {
     expect(skinRoundPot(18, confirmed2026Rules.skinRound)).toEqual({ total: 360, closestToPinTotal: 80, skinsTotal: 280 });
-    const skins = [{ holeNumber: 1, winnerId: "a", isTie: false }, { holeNumber: 2, winnerId: "b", isTie: false }, { holeNumber: 3, winnerId: "c", isTie: false }];
+    const skins = [{ holeNumber: 1, winnerId: "a", isTie: false, isComplete: true }, { holeNumber: 2, winnerId: "b", isTie: false, isComplete: true }, { holeNumber: 3, winnerId: "c", isTie: false, isComplete: true }];
     expect(payoutPerSkin(18, skins, confirmed2026Rules.skinRound)).toBe(93);
   });
 
