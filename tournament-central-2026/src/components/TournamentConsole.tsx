@@ -41,7 +41,7 @@ export default function TournamentConsole() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("ecbp-2026-preview");
+    const saved = window.localStorage.getItem("ecbp-2026-preview-v2");
     if (saved) {
       try {
         const state = JSON.parse(saved) as { players: Player[]; skinScores: Scores; closestToPin: Record<number, string>; teams: typeof teams; scrambleScores: Scores; skinOfficialTotals: Record<string, string>; scrambleOfficialTotals: Record<string, string> };
@@ -59,7 +59,7 @@ export default function TournamentConsole() {
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem("ecbp-2026-preview", JSON.stringify({ players, skinScores, closestToPin, teams, scrambleScores, skinOfficialTotals, scrambleOfficialTotals }));
+    window.localStorage.setItem("ecbp-2026-preview-v2", JSON.stringify({ players, skinScores, closestToPin, teams, scrambleScores, skinOfficialTotals, scrambleOfficialTotals }));
   }, [hydrated, players, skinScores, closestToPin, teams, scrambleScores, skinOfficialTotals, scrambleOfficialTotals]);
 
   const skinResults = useMemo(() => calculateSkins(players, tributeCourse, skinScores, confirmed2026Rules.skinRound), [players, skinScores]);

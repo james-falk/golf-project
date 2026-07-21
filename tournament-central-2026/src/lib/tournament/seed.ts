@@ -10,8 +10,8 @@ export const tributeCourse: Course = {
 };
 
 export const startingRoster: Player[] = [
-  ["Ethan", "A"], ["John Porth", "A"], ["Roger", "A"], ["Jeff Felts", "A"], ["Robert", "A"],
-  ["Steve", "B"], ["James", "B"], ["Kent", "B"], ["Thomas", "B"], ["Spencer", "B"],
-  ["Ken", "C"], ["Bryce", "C"], ["Lucas", "C"], ["Tate", "C"], ["Mitchell", "C"],
-  ["Maxwell", "D"], ["Greg", "D"], ["Pete", "D"],
+  ["Steve", "A"], ["John", "A"], ["Roger", "A"], ["Jeff", "A"], ["Ethan", "A"], ["Jim", "A"],
+  ["Sam", "B"], ["Thomas", "B"], ["Logan", "B"], ["James", "B"], ["Spencer", "B"], ["Kent", "B"],
+  ["Bryce", "C"], ["Tate", "C"], ["Lucas", "C"], ["Mitchell", "C"], ["Greg", "C"], ["Cam", "C"],
+  ["Pete", "D"], ["Brandon", "D"], ["Matt", "D"], ["Aiden", "D"], ["Jake", "D"], ["Maxwell", "D"],
 ].map(([name, tier], index) => ({ id: `player-${index + 1}`, name, tier: tier as Player["tier"] }));
