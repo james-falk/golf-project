@@ -5,13 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import type Lenis from "lenis";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { AccessRole } from "@/lib/access";
-import type { RoundKey, RoundPosting } from "@/lib/tournament/state";
-import type { Player } from "@/lib/tournament/types";
 
 type StoryProps = {
-  players: Player[];
   role: AccessRole;
-  postings: Partial<Record<RoundKey, RoundPosting>>;
   musicPlaying: boolean;
   onToggleMusic: () => void;
   onOpenResults: () => void;
@@ -28,26 +24,25 @@ const chapters = [
   { id: "results", label: "Posted boards", progress: 0.9 },
 ] as const;
 
-const rounds: Array<{ key: RoundKey; day: string; course: string; format: string }> = [
-  { key: "skins-thursday", day: "Thu", course: "The Tribute", format: "Skins" },
-  { key: "skins-friday", day: "Fri", course: "The Tribute", format: "Skins" },
-  { key: "scramble-friday", day: "Fri", course: "The Classic", format: "Scramble" },
-  { key: "skins-saturday", day: "Sat", course: "The Tribute", format: "Skins" },
-  { key: "scramble-saturday", day: "Sat", course: "The Classic", format: "Scramble" },
+const rounds = [
+  { day: "Thu", course: "The Tribute", format: "Skins" },
+  { day: "Fri", course: "The Tribute", format: "Skins" },
+  { day: "Fri", course: "The Classic", format: "Scramble" },
+  { day: "Sat", course: "The Tribute", format: "Skins" },
+  { day: "Sat", course: "The Classic", format: "Scramble" },
 ];
 
 const journeyCompleteKey = "ecbp-2026-journey-complete-v1";
 
 type ChapterId = (typeof chapters)[number]["id"];
 
-export function TournamentStory({ players, role, postings, musicPlaying, onToggleMusic, onOpenResults, onOpenScoring, onExit }: StoryProps) {
+export function TournamentStory({ role, musicPlaying, onToggleMusic, onOpenResults, onOpenScoring, onExit }: StoryProps) {
   const shellRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
   const [activeChapter, setActiveChapter] = useState<ChapterId>("arrival");
   const [journeyCompleted, setJourneyCompleted] = useState(false);
   const [soundOn, setSoundOn] = useState(false);
-  const postedCount = rounds.filter(({ key }) => postings[key]?.status === "posted").length;
 
   useEffect(() => {
     const restoreCompletion = window.setTimeout(() => {
@@ -128,6 +123,7 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
             .set(".journey-world-image", { scale: camera.start, transformOrigin: "50% 91%" })
             .set(".journey-cart-runner", { autoAlpha: 0, scale: 0.35 })
             .to(".journey-scroll-cue", { autoAlpha: 0, y: 28, duration: 0.32 }, 0.08)
+            .to(".journey-hero-seal", { autoAlpha: 0, scale: 0.72, rotate: -8, duration: 0.46 }, 0.18)
             .to(".journey-hero-copy", { autoAlpha: 0, yPercent: -35, filter: "blur(8px)", duration: 0.55 }, 0.35)
             .to(".journey-world-image", { scale: camera.field, transformOrigin: "71% 73%", duration: 1.05 }, 0.15)
             .fromTo(".journey-vignette", { opacity: 0.5 }, { opacity: 0.2, duration: 0.7 }, 0.25)
@@ -212,7 +208,6 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
         <button type="button" className={`journey-music ${musicPlaying ? "is-playing" : ""}`} onClick={onToggleMusic} aria-label={`${musicPlaying ? "Pause" : "Play"} Choices by E-40`} title="Choices (Yup) · E-40">
           <span aria-hidden="true"><i /><i /><i /></span>
         </button>
-        <div className="journey-posted" aria-label={`${postedCount} of five boards posted`}><span>{postedCount}</span>/5 posted</div>
       </header>
 
       <div ref={trackRef} className="journey-track">
@@ -238,11 +233,9 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
           </section>
 
           <section className="journey-layer journey-field" aria-label="The twenty-four player field">
-            <BrandLogo className="journey-field-seal" decorative sizes="120px" />
             <div className="journey-field-copy">
               <p className="journey-kicker">24 players</p>
               <h2>The<br /><em>field.</em></h2>
-              <div className="journey-tier-counts">{(["A", "B", "C", "D"] as const).map((tier) => <span key={tier}><b>{tier}</b>{players.filter((player) => player.tier === tier).length}</span>)}</div>
             </div>
             <Image className="journey-field-cutout" src="/story/field-cutout-24-v2.png" alt="Twenty-four golfers assembled on the practice lawn" width={1363} height={1154} sizes="(max-width: 759px) 112vw, 66vw" />
           </section>
@@ -282,18 +275,16 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
               <h2>Tribute.<br /><em>Classic.</em></h2>
             </div>
             <div className="journey-rounds">
-              {rounds.map((round, index) => <article className="journey-round" key={round.key}><span>{String(index + 1).padStart(2, "0")}</span><p><b>{round.day}</b><strong>{round.course}</strong><small>{round.format}</small></p><i className={postings[round.key]?.status === "posted" ? "is-posted" : ""}>{postings[round.key]?.status === "posted" ? "Posted" : "After play"}</i></article>)}
+              {rounds.map((round, index) => <article className="journey-round" key={`${round.day}-${round.format}`}><span>{String(index + 1).padStart(2, "0")}</span><p><b>{round.day}</b><strong>{round.course}</strong><small>{round.format}</small></p></article>)}
             </div>
           </section>
 
-          <section className="journey-layer journey-results" aria-label="Official posted results">
+          <section className="journey-layer journey-results" aria-label="Tournament standings and payouts">
             <div className="journey-board">
               <BrandLogo className="journey-board-seal" sizes="96px" />
-              <p className="journey-kicker">Posted results</p>
-              <h2>Official<br /><em>boards.</em></h2>
-              <p>Released after commissioner review.</p>
-              <div className="journey-board-status"><strong>{postedCount}</strong><span>of five boards<br /><b>officially posted</b></span></div>
-              <button type="button" disabled={!journeyCompleted} onClick={onOpenResults}>{journeyCompleted ? "Open the posted boards" : "Keep scrolling to unlock"} <span>→</span></button>
+              <p className="journey-kicker">Standings & payouts</p>
+              <h2>The<br /><em>boards.</em></h2>
+              <button type="button" disabled={!journeyCompleted} onClick={onOpenResults}>{journeyCompleted ? "Open the boards" : "Keep scrolling to unlock"} <span>→</span></button>
               {role === "scorekeeper" && journeyCompleted && <button type="button" className="journey-scorekeeper-link" onClick={onOpenScoring}>Enter the scoring room</button>}
             </div>
           </section>
