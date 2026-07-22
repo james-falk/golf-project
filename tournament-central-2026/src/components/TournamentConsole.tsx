@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LorePhoto, LoreStrip } from "@/components/ClubLore";
 import { TournamentStory } from "@/components/TournamentStory";
@@ -17,6 +17,8 @@ const skinDays: SkinDay[] = ["thursday", "friday", "saturday"];
 const scrambleDays: ScrambleDay[] = ["friday", "saturday"];
 const scorekeeperDraftKey = "ecbp-2026-scorekeeper-draft-v4";
 const legacyDraftKey = "ecbp-2026-preview-v3";
+const choicesPreviewUrl = "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/57/16/41/571641f5-9ed5-5829-d974-37c940f11d63/mzaf_2253382345250106604.plus.aac.p.m4a";
+const musicVolume = 0.09;
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "story", label: "The story" },
@@ -73,12 +75,63 @@ export function TournamentConsole() {
   const [accessCode, setAccessCode] = useState("");
   const [accessError, setAccessError] = useState("");
   const [syncState, setSyncState] = useState<"local" | "saving" | "synced" | "error">("local");
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const musicRef = useRef<HTMLAudioElement | null>(null);
+  const musicFadeRef = useRef<number | null>(null);
   const teams = teamsByDay[activeScrambleDay];
   const setTeams: React.Dispatch<React.SetStateAction<Team[]>> = (value) => setTeamsByDay((current) => ({ ...current, [activeScrambleDay]: typeof value === "function" ? value(current[activeScrambleDay]) : value }));
 
   useEffect(() => {
     fetch("/api/access", { cache: "no-store" }).then((response) => response.json()).then((data: { role: AccessRole | null }) => setAccessRole(data.role)).catch(() => setAccessRole(null));
   }, []);
+
+  useEffect(() => {
+    const music = new Audio(choicesPreviewUrl);
+    music.loop = true;
+    music.preload = "auto";
+    music.volume = 0;
+    const syncPlaybackState = () => setMusicPlaying(!music.paused);
+    music.addEventListener("play", syncPlaybackState);
+    music.addEventListener("pause", syncPlaybackState);
+    musicRef.current = music;
+    return () => {
+      if (musicFadeRef.current !== null) window.clearInterval(musicFadeRef.current);
+      music.removeEventListener("play", syncPlaybackState);
+      music.removeEventListener("pause", syncPlaybackState);
+      music.pause();
+      musicRef.current = null;
+    };
+  }, []);
+
+  const fadeMusicTo = useCallback((target: number, pauseWhenSilent = false) => {
+    const music = musicRef.current;
+    if (!music) return;
+    if (musicFadeRef.current !== null) window.clearInterval(musicFadeRef.current);
+    musicFadeRef.current = window.setInterval(() => {
+      const delta = target - music.volume;
+      if (Math.abs(delta) <= 0.012) {
+        music.volume = target;
+        if (musicFadeRef.current !== null) window.clearInterval(musicFadeRef.current);
+        musicFadeRef.current = null;
+        if (pauseWhenSilent && target === 0) music.pause();
+        return;
+      }
+      music.volume = Math.max(0, Math.min(1, music.volume + Math.sign(delta) * 0.012));
+    }, 70);
+  }, []);
+
+  const startMusic = useCallback(() => {
+    const music = musicRef.current;
+    if (!music) return;
+    void music.play().then(() => fadeMusicTo(musicVolume)).catch(() => setMusicPlaying(false));
+  }, [fadeMusicTo]);
+
+  const stopMusic = useCallback(() => fadeMusicTo(0, true), [fadeMusicTo]);
+
+  const toggleMusic = useCallback(() => {
+    if (musicRef.current?.paused) startMusic();
+    else stopMusic();
+  }, [startMusic, stopMusic]);
 
   useEffect(() => {
     if (!accessRole || accessRole === "loading") return;
@@ -184,15 +237,27 @@ export function TournamentConsole() {
 
   const enterClubhouse = async () => {
     setAccessError("");
+    const music = musicRef.current;
+    if (music) {
+      music.volume = 0;
+      void music.play().catch(() => setMusicPlaying(false));
+    }
     const response = await fetch("/api/access", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: accessCode }) });
     const data = await response.json() as { role?: AccessRole; error?: string };
-    if (!response.ok || !data.role) { setAccessError(data.error ?? "That passcode did not work."); return; }
+    if (!response.ok || !data.role) {
+      music?.pause();
+      if (music) music.currentTime = 0;
+      setAccessError(data.error ?? "That passcode did not work.");
+      return;
+    }
+    fadeMusicTo(musicVolume);
     setHydrated(false);
     setAccessRole(data.role);
     setAccessCode("");
   };
 
   const leaveClubhouse = async () => {
+    stopMusic();
     await fetch("/api/access", { method: "DELETE" });
     setAccessRole(null);
     setTab("story");
@@ -208,7 +273,7 @@ export function TournamentConsole() {
   const canEdit = accessRole === "scorekeeper";
   const visibleTabs = canEdit ? tabs : tabs.filter((item) => item.id !== "setup");
 
-  if (tab === "story") return <TournamentStory players={players} role={accessRole} postings={postings} onOpenResults={() => switchTab("central")} onOpenScoring={() => switchTab("skins")} onExit={leaveClubhouse} />;
+  if (tab === "story") return <TournamentStory players={players} role={accessRole} postings={postings} musicPlaying={musicPlaying} onToggleMusic={toggleMusic} onOpenResults={() => switchTab("central")} onOpenScoring={() => switchTab("skins")} onExit={leaveClubhouse} />;
 
   return (
     <main className="club-site min-h-screen text-stone-100">
@@ -222,7 +287,7 @@ export function TournamentConsole() {
                 <h1 className="club-title mt-1">East Coast Big Playas Invitational</h1>
               </div>
             </div>
-            <div className="flex items-center gap-2"><button type="button" onClick={() => window.location.reload()} className="club-badge">{canEdit ? syncState === "saving" ? "Saving…" : syncState === "error" ? "Save needs attention" : "Scorekeeper · Shared" : "Refresh posted boards"}</button><button type="button" onClick={leaveClubhouse} className="club-badge">Exit</button></div>
+            <div className="flex items-center gap-2"><button type="button" onClick={toggleMusic} className={`club-badge club-music ${musicPlaying ? "is-playing" : ""}`} aria-label={`${musicPlaying ? "Pause" : "Play"} Choices by E-40`}><span aria-hidden="true">♪</span> Choices</button><button type="button" onClick={() => window.location.reload()} className="club-badge">{canEdit ? syncState === "saving" ? "Saving…" : syncState === "error" ? "Save needs attention" : "Scorekeeper · Shared" : "Refresh posted boards"}</button><button type="button" onClick={leaveClubhouse} className="club-badge">Exit</button></div>
           </div>
           <nav className="club-nav mt-5 flex overflow-x-auto" aria-label="Tournament areas">
             {visibleTabs.map((item) => <button key={item.id} onClick={() => switchTab(item.id)} className={`club-tab whitespace-nowrap ${tab === item.id ? "club-tab-active" : ""}`}>{item.label}</button>)}

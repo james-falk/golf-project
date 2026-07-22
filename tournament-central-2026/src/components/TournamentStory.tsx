@@ -12,6 +12,8 @@ type StoryProps = {
   players: Player[];
   role: AccessRole;
   postings: Partial<Record<RoundKey, RoundPosting>>;
+  musicPlaying: boolean;
+  onToggleMusic: () => void;
   onOpenResults: () => void;
   onOpenScoring: () => void;
   onExit: () => void;
@@ -36,7 +38,7 @@ const rounds: Array<{ key: RoundKey; day: string; course: string; format: string
 
 type ChapterId = (typeof chapters)[number]["id"];
 
-export function TournamentStory({ players, role, postings, onOpenResults, onOpenScoring, onExit }: StoryProps) {
+export function TournamentStory({ players, role, postings, musicPlaying, onToggleMusic, onOpenResults, onOpenScoring, onExit }: StoryProps) {
   const shellRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
@@ -181,6 +183,9 @@ export function TournamentStory({ players, role, postings, onOpenResults, onOpen
       <header className="journey-topbar">
         <button type="button" className="journey-crest" onClick={() => goToChapter(chapters[0])} aria-label="Return to the first tee"><BrandLogo decorative priority sizes="44px" /></button>
         <p><strong>East Coast Big Playas</strong></p>
+        <button type="button" className={`journey-music ${musicPlaying ? "is-playing" : ""}`} onClick={onToggleMusic} aria-label={`${musicPlaying ? "Pause" : "Play"} Choices by E-40`} title="Choices (Yup) · E-40">
+          <span aria-hidden="true"><i /><i /><i /></span>
+        </button>
         <button type="button" className="journey-posted" onClick={onOpenResults}><span>{postedCount}</span>/5 posted</button>
       </header>
 
@@ -202,7 +207,7 @@ export function TournamentStory({ players, role, postings, onOpenResults, onOpen
               <p className="journey-kicker">Otsego Club · 2026</p>
               <h1><span>East Coast</span><em>Big Playas</em></h1>
             </div>
-            <button type="button" className="journey-enter" onClick={() => goToChapter(chapters[1])}><span>Enter the grounds</span><i /></button>
+            <button type="button" className="journey-enter" onClick={() => { if (!musicPlaying) onToggleMusic(); goToChapter(chapters[1]); }}><span>Enter the grounds</span><i /></button>
           </section>
 
           <section className="journey-layer journey-field" aria-label="The twenty-four player field">

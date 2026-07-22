@@ -61,6 +61,9 @@ body {
 .club-title { color: #f3ead5; font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 700; }
 .club-kicker, .club-ledger-label { color: #d6ba73; font-family: Georgia, "Times New Roman", serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; }
 .club-badge { border: 1px solid rgba(214,186,115,0.62); color: #f0deb2; font-family: Georgia, "Times New Roman", serif; font-size: 0.78rem; letter-spacing: 0.08em; padding: 0.42rem 0.7rem; text-transform: uppercase; }
+.club-music { display: inline-flex; align-items: center; gap: 0.35rem; }
+.club-music span { color: #d6ba73; font-size: 1rem; }
+.club-music.is-playing span { animation: music-note-pulse 1.2s ease-in-out infinite; }
 .club-nav { border: 1px solid rgba(214,186,115,0.45); border-bottom: 0; width: fit-content; max-width: 100%; }
 .club-tab { border-right: 1px solid rgba(214,186,115,0.3); color: #e1d3b3; font-family: Georgia, "Times New Roman", serif; font-size: 0.88rem; padding: 0.58rem 1rem; transition: background 160ms, color 160ms; }
 .club-tab:last-child { border-right: 0; }
@@ -689,7 +692,7 @@ body:has(.journey-shell) .lore-button { display: none; }
   right: 0;
   left: 0;
   display: grid;
-  grid-template-columns: 2.8rem minmax(0, 1fr) auto;
+  grid-template-columns: 2.8rem minmax(0, 1fr) 2.45rem auto;
   align-items: center;
   gap: 0.72rem;
   padding: calc(0.58rem + env(safe-area-inset-top)) 0.72rem 0.58rem;
@@ -713,6 +716,14 @@ body:has(.journey-shell) .lore-button { display: none; }
 .journey-topbar > p span { margin-top: 0.18rem; color: #d2bc88; font-size: 0.48rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; }
 .journey-posted { min-height: 2.45rem; border: 1px solid rgba(225,190,104,0.62); color: #e6d7b5; padding: 0 0.62rem; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
 .journey-posted span { color: var(--journey-gold); font-family: var(--font-club-display), Georgia, serif; font-size: 1rem; }
+.journey-music { display: grid; width: 2.45rem; height: 2.45rem; place-items: center; border: 1px solid rgba(225,190,104,0.36); color: var(--journey-gold); }
+.journey-music > span { display: flex; height: 0.9rem; align-items: end; gap: 0.12rem; }
+.journey-music i { display: block; width: 0.13rem; height: 35%; background: currentColor; transform-origin: bottom; }
+.journey-music i:nth-child(2) { height: 80%; }
+.journey-music i:nth-child(3) { height: 55%; }
+.journey-music.is-playing i { animation: journey-equalizer 0.8s ease-in-out infinite alternate; }
+.journey-music.is-playing i:nth-child(2) { animation-delay: -0.3s; }
+.journey-music.is-playing i:nth-child(3) { animation-delay: -0.55s; }
 
 .journey-track { position: relative; height: 830svh; }
 .journey-stage { position: sticky; top: 0; width: 100%; height: 100svh; overflow: hidden; background: #09231b; perspective: 1200px; }
@@ -839,6 +850,8 @@ body:has(.journey-shell) .lore-button { display: none; }
 
 @keyframes journey-cloud-drift { from { transform: translate3d(-2%, -1%, 0) scale(1.04); } to { transform: translate3d(3%, 2%, 0) scale(1.1); } }
 @keyframes journey-enter { 0%, 100% { opacity: 0.35; transform: scaleX(0.7); transform-origin: left; } 50% { opacity: 1; transform: scaleX(1); } }
+@keyframes journey-equalizer { from { transform: scaleY(0.35); } to { transform: scaleY(1); } }
+@keyframes music-note-pulse { 0%, 100% { opacity: 0.55; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
 
 @media (min-width: 760px) {
   .journey-topbar { padding-right: 1.2rem; padding-left: 1.2rem; }
@@ -873,6 +886,6 @@ body:has(.journey-shell) .lore-button { display: none; }
   .journey-world-image { width: 100%; height: 100%; object-fit: cover; transform: none !important; }
   .journey-layer { position: relative; visibility: visible !important; min-height: 100svh; opacity: 1 !important; transform: none !important; }
   .journey-hero-copy, .journey-field-copy > *, .journey-field-cutout, .journey-jeff, .journey-shrine-copy > *, .journey-evidence, .journey-weekend, .journey-results, .journey-board, .journey-board > * { visibility: visible !important; opacity: 1 !important; transform: none !important; filter: none !important; }
-  .journey-clouds, .journey-enter i { animation: none; }
+  .journey-clouds, .journey-enter i, .journey-music i, .club-music span { animation: none; }
   .journey-nav { display: none; }
 }
