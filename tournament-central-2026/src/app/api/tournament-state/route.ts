@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { accessCookieName, roleFromToken } from "@/lib/access";
+import { sanitizeTournamentStateForViewer } from "@/lib/tournament/public-state";
 import type { TournamentState } from "@/lib/tournament/state";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,8 @@ export async function GET() {
   if (!sql) return NextResponse.json({ state: null, shared: false });
   await ensureTable(sql);
   const rows = await sql`SELECT payload, updated_at FROM tournament_state WHERE id = ${stateId}`;
-  return NextResponse.json({ state: rows[0]?.payload ?? null, updatedAt: rows[0]?.updated_at ?? null, shared: true });
+  const state = (rows[0]?.payload ?? null) as TournamentState | null;
+  return NextResponse.json({ state: state && role === "viewer" ? sanitizeTournamentStateForViewer(state) : state, updatedAt: rows[0]?.updated_at ?? null, shared: true });
 }
 
 export async function PUT(request: Request) {
@@ -48,6 +50,7 @@ export async function PUT(request: Request) {
     closestToPin: { ...(current.closestToPin ?? {}), ...(incoming.closestToPin ?? {}) },
     scrambleScores: { ...(current.scrambleScores ?? {}), ...(incoming.scrambleScores ?? {}) },
     scrambleOfficialTotals: { ...(current.scrambleOfficialTotals ?? {}), ...(incoming.scrambleOfficialTotals ?? {}) },
+    postings: { ...(current.postings ?? {}), ...(incoming.postings ?? {}) },
   };
   const result = await sql`INSERT INTO tournament_state (id, payload, updated_at)
     VALUES (${stateId}, ${JSON.stringify(merged)}::jsonb, now())

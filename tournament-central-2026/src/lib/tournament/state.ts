@@ -2,6 +2,14 @@ import type { HoleScore, Player } from "./types";
 
 export type Scores = Record<string, HoleScore[]>;
 export type Team = { id: string; name: string; playerIds: string[] };
+export type SkinDay = "thursday" | "friday" | "saturday";
+export type ScrambleDay = "friday" | "saturday";
+export type RoundKey = `skins-${SkinDay}` | `scramble-${ScrambleDay}`;
+export type RoundPosting = {
+  status: "review" | "posted";
+  postedAt?: string;
+  revision: number;
+};
 
 export type TournamentState = {
   players: Player[];
@@ -11,4 +19,5 @@ export type TournamentState = {
   teamsByDay: Record<"friday" | "saturday", Team[]>;
   scrambleScores: Scores;
   scrambleOfficialTotals: Record<string, string>;
+  postings: Partial<Record<RoundKey, RoundPosting>>;
 };

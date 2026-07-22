@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { BrandLogo } from "@/components/BrandLogo";
 
 type LoreItem = {
   src: string;
@@ -84,7 +85,7 @@ export function ClubLoreProvider({ children }: { children: React.ReactNode }) {
   return <ClubLoreContext.Provider value={{ openLore }}>
     {children}
     <button type="button" onClick={() => openLore(discovered.length % loreItems.length)} className="lore-button" aria-label="Open the clubhouse lore collection">
-      <span aria-hidden="true">19</span><span>Club lore</span><small>{discovered.length}/{loreItems.length}</small>
+      <BrandLogo className="lore-button-logo" decorative sizes="36px" /><span>Club lore</span><small>{discovered.length}/{loreItems.length}</small>
     </button>
     {open && <div className="lore-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) close(); }}>
       <section className="lore-dialog" role="dialog" aria-modal="true" aria-labelledby="lore-title">
