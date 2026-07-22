@@ -36,6 +36,8 @@ const rounds: Array<{ key: RoundKey; day: string; course: string; format: string
   { key: "scramble-saturday", day: "Sat", course: "The Classic", format: "Scramble" },
 ];
 
+const journeyCompleteKey = "ecbp-2026-journey-complete-v1";
+
 type ChapterId = (typeof chapters)[number]["id"];
 
 export function TournamentStory({ players, role, postings, musicPlaying, onToggleMusic, onOpenResults, onOpenScoring, onExit }: StoryProps) {
@@ -43,8 +45,17 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
   const trackRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
   const [activeChapter, setActiveChapter] = useState<ChapterId>("arrival");
+  const [journeyCompleted, setJourneyCompleted] = useState(false);
   const [soundOn, setSoundOn] = useState(false);
   const postedCount = rounds.filter(({ key }) => postings[key]?.status === "posted").length;
+
+  useEffect(() => {
+    const restoreCompletion = window.setTimeout(() => {
+      try { setJourneyCompleted(window.localStorage.getItem(journeyCompleteKey) === "yes"); }
+      catch { /* The tour simply stays locked when storage is unavailable. */ }
+    }, 0);
+    return () => window.clearTimeout(restoreCompletion);
+  }, []);
 
   useEffect(() => {
     const shell = shellRef.current;
@@ -102,6 +113,11 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
                 let next: ChapterId = chapters[0].id;
                 chapters.forEach((chapter) => { if (progress >= chapter.progress - 0.035) next = chapter.id; });
                 setActiveChapter((current) => current === next ? current : next);
+                if (progress >= 0.985) {
+                  setJourneyCompleted(true);
+                  try { window.localStorage.setItem(journeyCompleteKey, "yes"); }
+                  catch { /* Completion still unlocks for this visit. */ }
+                }
               },
             },
           });
@@ -111,6 +127,7 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
             .set(".journey-hero", { autoAlpha: 1 })
             .set(".journey-world-image", { scale: camera.start, transformOrigin: "50% 91%" })
             .set(".journey-cart-runner", { autoAlpha: 0, scale: 0.35 })
+            .to(".journey-scroll-cue", { autoAlpha: 0, y: 28, duration: 0.32 }, 0.08)
             .to(".journey-hero-copy", { autoAlpha: 0, yPercent: -35, filter: "blur(8px)", duration: 0.55 }, 0.35)
             .to(".journey-world-image", { scale: camera.field, transformOrigin: "71% 73%", duration: 1.05 }, 0.15)
             .fromTo(".journey-vignette", { opacity: 0.5 }, { opacity: 0.2, duration: 0.7 }, 0.25)
@@ -178,6 +195,15 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
     else window.scrollTo({ top: target, behavior: "smooth" });
   };
 
+  const fastForwardToBoards = () => {
+    const track = trackRef.current;
+    if (!track || !journeyCompleted) return;
+    const top = window.scrollY + track.getBoundingClientRect().top;
+    const target = top + track.offsetHeight - window.innerHeight;
+    if (lenisRef.current) lenisRef.current.scrollTo(target, { duration: 2.6 });
+    else window.scrollTo({ top: target, behavior: "smooth" });
+  };
+
   return (
     <main ref={shellRef} className="journey-shell">
       <header className="journey-topbar">
@@ -186,7 +212,7 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
         <button type="button" className={`journey-music ${musicPlaying ? "is-playing" : ""}`} onClick={onToggleMusic} aria-label={`${musicPlaying ? "Pause" : "Play"} Choices by E-40`} title="Choices (Yup) · E-40">
           <span aria-hidden="true"><i /><i /><i /></span>
         </button>
-        <button type="button" className="journey-posted" onClick={onOpenResults}><span>{postedCount}</span>/5 posted</button>
+        <div className="journey-posted" aria-label={`${postedCount} of five boards posted`}><span>{postedCount}</span>/5 posted</div>
       </header>
 
       <div ref={trackRef} className="journey-track">
@@ -207,6 +233,7 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
               <p className="journey-kicker">Otsego Club · 2026</p>
               <h1><span>East Coast</span><em>Big Playas</em></h1>
             </div>
+            <div className="journey-scroll-cue" aria-hidden="true"><span>Scroll to enter</span><i /><i /></div>
             <button type="button" className="journey-enter" onClick={() => { if (!musicPlaying) onToggleMusic(); goToChapter(chapters[1]); }}><span>Enter the grounds</span><i /></button>
           </section>
 
@@ -266,20 +293,22 @@ export function TournamentStory({ players, role, postings, musicPlaying, onToggl
               <h2>Official<br /><em>boards.</em></h2>
               <p>Released after commissioner review.</p>
               <div className="journey-board-status"><strong>{postedCount}</strong><span>of five boards<br /><b>officially posted</b></span></div>
-              <button type="button" onClick={onOpenResults}>Open the posted boards <span>→</span></button>
-              {role === "scorekeeper" && <button type="button" className="journey-scorekeeper-link" onClick={onOpenScoring}>Enter the scoring room</button>}
+              <button type="button" disabled={!journeyCompleted} onClick={onOpenResults}>{journeyCompleted ? "Open the posted boards" : "Keep scrolling to unlock"} <span>→</span></button>
+              {role === "scorekeeper" && journeyCompleted && <button type="button" className="journey-scorekeeper-link" onClick={onOpenScoring}>Enter the scoring room</button>}
             </div>
           </section>
         </div>
       </div>
 
       <nav className="journey-nav" aria-label="Course journey">
-        {chapters.map((chapter) => <button key={chapter.id} type="button" className={activeChapter === chapter.id ? "is-active" : ""} onClick={() => goToChapter(chapter)} aria-label={`Go to ${chapter.label}`}><i /></button>)}
+        {chapters.map((chapter) => <button key={chapter.id} type="button" disabled={!journeyCompleted} className={activeChapter === chapter.id ? "is-active" : ""} onClick={() => goToChapter(chapter)} aria-label={journeyCompleted ? `Go to ${chapter.label}` : `${chapter.label} chapter progress`}><i /></button>)}
       </nav>
 
-      <div className="journey-utilities">
-        <button type="button" onClick={onOpenResults}><span>{postedCount}</span>Results</button>
-        <button type="button" onClick={role === "scorekeeper" ? onOpenScoring : onExit}><span>{role === "scorekeeper" ? "+" : "↗"}</span>{role === "scorekeeper" ? "Scores" : "Exit"}</button>
+      {journeyCompleted && <button type="button" className="journey-fast-pass" onClick={fastForwardToBoards}><span>↓</span><small>Fast pass</small><strong>Boards</strong></button>}
+
+      <div className={`journey-utilities ${!journeyCompleted || role !== "scorekeeper" ? "journey-utilities-single" : ""}`}>
+        {journeyCompleted && role === "scorekeeper" && <button type="button" onClick={onOpenScoring}><span>+</span>Scores</button>}
+        <button type="button" onClick={onExit}><span>↗</span>Exit</button>
       </div>
     </main>
   );
