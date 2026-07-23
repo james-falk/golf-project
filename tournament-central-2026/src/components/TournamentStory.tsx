@@ -235,7 +235,7 @@ export function TournamentStory({ role, musicPlaying, onToggleMusic, onOpenResul
           <section className="journey-layer journey-field" aria-label="The twenty-four player field">
             <div className="journey-field-copy">
               <p className="journey-kicker">24 players</p>
-              <h2>The<br /><em>field.</em></h2>
+              <h2>Meet the<br /><em>Larrys &amp;<br />the Daryls.</em></h2>
             </div>
             <Image className="journey-field-cutout" src="/story/field-cutout-24-v2.png" alt="Twenty-four golfers assembled on the practice lawn" width={1363} height={1154} sizes="(max-width: 759px) 112vw, 66vw" />
           </section>

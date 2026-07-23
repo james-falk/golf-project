@@ -790,6 +790,7 @@ body:has(.journey-shell) .lore-button { display: none; }
 
 .journey-field-copy { position: absolute; z-index: 3; top: 13%; left: 1.1rem; width: min(88%, 33rem); text-shadow: 0 0.18rem 1.8rem rgba(0,0,0,0.7); }
 .journey-field-copy h2, .journey-shrine-copy h2, .journey-evidence-copy h2, .journey-weekend-copy h2 { margin-top: 0.62rem; font-size: clamp(3.2rem, 14.5vw, 7rem); font-weight: 600; letter-spacing: -0.055em; line-height: 0.78; }
+.journey-field-copy h2 { font-size: clamp(2.6rem, 11.5vw, 6.2rem); line-height: 0.82; }
 .journey-field-cutout { position: absolute; z-index: 2; right: -10vw; bottom: 3.2rem; width: 120vw; max-width: none; height: auto; filter: drop-shadow(0 1.4rem 1.2rem rgba(0,0,0,0.42)); will-change: transform, opacity; }
 
 .journey-shrine-halo { position: absolute; z-index: 1; top: 18%; left: 50%; width: 96vw; height: 96vw; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(246,207,110,0.25) 0 6deg, transparent 6deg 17deg); mask-image: radial-gradient(circle, #000 0, transparent 70%); transform: translateX(-50%); will-change: transform; }
