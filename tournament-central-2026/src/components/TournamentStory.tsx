@@ -4,14 +4,11 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type Lenis from "lenis";
 import { BrandLogo } from "@/components/BrandLogo";
-import type { AccessRole } from "@/lib/access";
 
 type StoryProps = {
-  role: AccessRole;
   musicPlaying: boolean;
   onToggleMusic: () => void;
   onOpenResults: () => void;
-  onOpenScoring: () => void;
   onExit: () => void;
 };
 
@@ -36,7 +33,7 @@ const journeyCompleteKey = "ecbp-2026-journey-complete-v1";
 
 type ChapterId = (typeof chapters)[number]["id"];
 
-export function TournamentStory({ role, musicPlaying, onToggleMusic, onOpenResults, onOpenScoring, onExit }: StoryProps) {
+export function TournamentStory({ musicPlaying, onToggleMusic, onOpenResults, onExit }: StoryProps) {
   const shellRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
@@ -164,8 +161,7 @@ export function TournamentStory({ role, musicPlaying, onToggleMusic, onOpenResul
             .to(".journey-world-image", { scale: camera.results, transformOrigin: "76% 13%", duration: 1.16 }, 4.78)
             .to(".journey-light", { opacity: 0.8, duration: 0.85 }, 4.78)
             .fromTo(".journey-results", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.42 }, 5.15)
-            .fromTo(".journey-board", { yPercent: 35, scale: 0.86, rotateX: -12, autoAlpha: 0 }, { yPercent: 0, scale: 1, rotateX: 0, autoAlpha: 1, duration: 0.78 }, 5.08)
-            .fromTo(".journey-board > *", { y: 25, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.07, duration: 0.34 }, 5.35);
+            .fromTo(".journey-scoreboard-door", { yPercent: 35, scale: 0.86, rotateX: -12, autoAlpha: 0 }, { yPercent: 0, scale: 1, rotateX: 0, autoAlpha: 1, duration: 0.78 }, 5.08);
         };
         media.add("(max-width: 759px)", () => buildJourney(true));
         media.add("(min-width: 760px)", () => buildJourney(false));
@@ -282,13 +278,9 @@ export function TournamentStory({ role, musicPlaying, onToggleMusic, onOpenResul
           </section>
 
           <section className="journey-layer journey-results" aria-label="Tournament standings and payouts">
-            <div className="journey-board">
-              <BrandLogo className="journey-board-seal" sizes="96px" />
-              <p className="journey-kicker">Standings & payouts</p>
-              <h2>The<br /><em>boards.</em></h2>
-              <button type="button" disabled={!journeyCompleted} onClick={onOpenResults}>{journeyCompleted ? "Open the boards" : "Keep scrolling to unlock"} <span>→</span></button>
-              {role === "scorekeeper" && journeyCompleted && <button type="button" className="journey-scorekeeper-link" onClick={onOpenScoring}>Enter the scoring room</button>}
-            </div>
+            <button type="button" className="journey-scoreboard-door" disabled={!journeyCompleted} onClick={onOpenResults}>
+              <span>View Scoreboard</span><i aria-hidden="true">→</i>
+            </button>
           </section>
         </div>
       </div>
@@ -297,10 +289,9 @@ export function TournamentStory({ role, musicPlaying, onToggleMusic, onOpenResul
         {chapters.map((chapter) => <button key={chapter.id} type="button" disabled={!journeyCompleted} className={activeChapter === chapter.id ? "is-active" : ""} onClick={() => goToChapter(chapter)} aria-label={journeyCompleted ? `Go to ${chapter.label}` : `${chapter.label} chapter progress`}><i /></button>)}
       </nav>
 
-      {journeyCompleted && <button type="button" className="journey-fast-pass" onClick={fastForwardToBoards}><span>↓</span><small>Fast pass</small><strong>Boards</strong></button>}
+      {journeyCompleted && <button type="button" className="journey-fast-pass" onClick={fastForwardToBoards}><span>↓</span><small>Fast pass</small><strong>Scoreboard</strong></button>}
 
-      <div className={`journey-utilities ${!journeyCompleted || role !== "scorekeeper" ? "journey-utilities-single" : ""}`}>
-        {journeyCompleted && role === "scorekeeper" && <button type="button" onClick={onOpenScoring}><span>+</span>Scores</button>}
+      <div className="journey-utilities journey-utilities-single">
         <button type="button" onClick={onExit}><span>↗</span>Exit</button>
       </div>
     </main>

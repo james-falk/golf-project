@@ -677,8 +677,7 @@ body:has(.story-gate) .lore-button { display: none; }
 }
 
 .journey-shell h1,
-.journey-shell h2,
-.journey-board {
+.journey-shell h2 {
   font-family: var(--font-club-display), Georgia, serif;
 }
 
@@ -821,14 +820,12 @@ body:has(.journey-shell) .lore-button { display: none; }
 .journey-round small { grid-column: 2; color: #b9ae96; font-size: 0.55rem; }
 
 .journey-results { display: grid; place-items: center; padding: 5rem 0.9rem 4rem; }
-.journey-board { position: relative; z-index: 3; width: min(100%, 38rem); border: 5px double #a98d51; background: linear-gradient(145deg, rgba(14,53,43,0.96), rgba(5,26,21,0.97)); box-shadow: 0 2rem 5rem rgba(0,0,0,0.62), inset 0 0 3rem rgba(0,0,0,0.28); padding: 1.9rem 1.25rem 1.35rem; text-align: center; transform-style: preserve-3d; }
-.journey-board-seal { position: relative; z-index: 2; display: block; width: 5.5rem; height: auto; margin: -0.25rem auto 0.65rem; filter: drop-shadow(0 0.7rem 0.9rem rgba(0,0,0,0.45)); }
-.journey-board::before { position: absolute; inset: 0.5rem; border: 1px solid rgba(225,190,104,0.32); content: ""; pointer-events: none; }
-.journey-board h2 { margin-top: 0.75rem; font-size: clamp(3.1rem, 14.5vw, 6rem); font-weight: 600; letter-spacing: -0.055em; line-height: 0.72; }
-.journey-board > button { position: relative; z-index: 2; width: 100%; min-height: 3rem; margin-top: 1.25rem; border: 1px solid var(--journey-gold); background: #e4cd94; color: #113b30; font-size: 0.95rem; font-weight: 700; }
-.journey-board > button:disabled { background: rgba(8,35,28,0.72); color: #bbaa83; cursor: default; }
-.journey-board > button span { margin-left: 0.4rem; }
-.journey-board > button.journey-scorekeeper-link { margin-top: 0.45rem; background: transparent; color: #e8d6aa; font-family: var(--font-geist-sans), sans-serif; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.journey-scoreboard-door { position: relative; z-index: 3; display: grid; width: min(calc(100% - 1.2rem), 29rem); min-height: 5.4rem; grid-template-columns: 1fr 4.9rem; align-items: center; border: 5px double #a98d51; background: linear-gradient(145deg, #f0dfb7, #d7bb79); box-shadow: 0 2rem 5rem rgba(0,0,0,0.62), inset 0 0 0 1px rgba(255,255,255,0.55); color: #10382e; text-align: left; transform-style: preserve-3d; }
+.journey-scoreboard-door::before { position: absolute; inset: 0.38rem; border: 1px solid rgba(16,56,46,0.35); content: ""; pointer-events: none; }
+.journey-scoreboard-door span { position: relative; z-index: 2; padding-left: 1.45rem; font-family: var(--font-club-display), Georgia, serif; font-size: clamp(1.6rem, 7vw, 2.35rem); font-weight: 700; letter-spacing: -0.025em; }
+.journey-scoreboard-door i { position: relative; z-index: 2; display: grid; height: 100%; place-items: center; border-left: 1px solid rgba(16,56,46,0.38); font-family: var(--font-club-display), Georgia, serif; font-size: 2rem; font-style: normal; transition: background 180ms, transform 180ms; }
+.journey-scoreboard-door:not(:disabled):active i { background: rgba(16,56,46,0.1); transform: translateX(0.18rem); }
+.journey-scoreboard-door:disabled { cursor: default; filter: saturate(0.72); }
 
 .journey-nav { position: fixed; z-index: 75; top: 50%; right: 0.55rem; display: flex; flex-direction: column; gap: 0.08rem; transform: translateY(-50%); }
 .journey-nav button { display: grid; width: 1.4rem; height: 2rem; place-items: center; color: rgba(245,235,211,0.48); }
@@ -887,7 +884,7 @@ body:has(.journey-shell) .lore-button { display: none; }
   .journey-camera { inset: 0; width: 100%; height: 100%; transform: none; }
   .journey-world-image { width: 100%; height: 100%; object-fit: cover; transform: none !important; }
   .journey-layer { position: relative; visibility: visible !important; min-height: 100svh; opacity: 1 !important; transform: none !important; }
-  .journey-hero-copy, .journey-field-copy > *, .journey-field-cutout, .journey-jeff, .journey-shrine-copy > *, .journey-evidence, .journey-weekend, .journey-results, .journey-board, .journey-board > * { visibility: visible !important; opacity: 1 !important; transform: none !important; filter: none !important; }
+  .journey-hero-copy, .journey-field-copy > *, .journey-field-cutout, .journey-jeff, .journey-shrine-copy > *, .journey-evidence, .journey-weekend, .journey-results, .journey-scoreboard-door { visibility: visible !important; opacity: 1 !important; transform: none !important; filter: none !important; }
   .journey-clouds, .journey-enter i, .journey-scroll-cue span, .journey-scroll-cue i, .journey-fast-pass, .journey-music i, .club-music span { animation: none; }
   .journey-nav { display: none; }
 }

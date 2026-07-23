@@ -273,7 +273,7 @@ export function TournamentConsole() {
   const canEdit = accessRole === "scorekeeper";
   const visibleTabs = canEdit ? tabs : tabs.filter((item) => item.id !== "setup");
 
-  if (tab === "story") return <TournamentStory role={accessRole} musicPlaying={musicPlaying} onToggleMusic={toggleMusic} onOpenResults={() => switchTab("central")} onOpenScoring={() => switchTab("skins")} onExit={leaveClubhouse} />;
+  if (tab === "story") return <TournamentStory musicPlaying={musicPlaying} onToggleMusic={toggleMusic} onOpenResults={() => switchTab("central")} onExit={leaveClubhouse} />;
 
   return (
     <main className="club-site min-h-screen text-stone-100">
