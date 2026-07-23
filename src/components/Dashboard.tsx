@@ -12,6 +12,7 @@ import LeaderboardTab from './tabs/LeaderboardTab';
 
 const Dashboard = () => {
   const { userRole, logout, preloadedData } = useAuth();
+  const isArchiveMode = process.env.NEXT_PUBLIC_ARCHIVE_MODE === 'true';
   
   // Load saved tab and round state, or use defaults
   const [activeTab, setActiveTab] = useState<GameTab>(() => {
@@ -67,7 +68,7 @@ const Dashboard = () => {
 
   // Save data whenever it changes (admin only) - with debounce
   useEffect(() => {
-    if (!tournamentData || userRole !== 'admin') {
+    if (!tournamentData || userRole !== 'admin' || isArchiveMode) {
       return;
     }
 
@@ -96,7 +97,7 @@ const Dashboard = () => {
     const timeoutId = setTimeout(saveData, 500);
     
     return () => clearTimeout(timeoutId);
-  }, [tournamentData, userRole, isLoading]);
+  }, [tournamentData, userRole, isLoading, isArchiveMode]);
 
   // Save active tab to localStorage
   useEffect(() => {
@@ -116,7 +117,7 @@ const Dashboard = () => {
 
   // Memoize updateRoundData to prevent infinite loops
   const updateRoundData = useCallback((updater: (round: RoundData) => RoundData) => {
-    if (userRole !== 'admin') return; // Do nothing if not admin
+    if (userRole !== 'admin' || isArchiveMode) return; // Do nothing if not admin or archive
     
     updateTournamentData(tournament => ({
       ...tournament,
@@ -124,7 +125,7 @@ const Dashboard = () => {
         r.id === activeRound ? updater(r) : r
       )
     }));
-  }, [userRole, activeRound, updateTournamentData]);
+  }, [userRole, activeRound, updateTournamentData, isArchiveMode]);
 
   if (isLoading || !tournamentData) {
     return (
@@ -155,7 +156,7 @@ const Dashboard = () => {
   ];
 
   const renderTabContent = () => {
-    const isReadOnly = userRole !== 'admin';
+    const isReadOnly = userRole !== 'admin' || isArchiveMode;
 
     switch (activeTab) {
       case 'skins':
@@ -195,7 +196,7 @@ const Dashboard = () => {
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 justify-between items-start sm:items-center">
               <div>
                 <h1 className="text-lg sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
-                  🏌️ East Coast Big Playas 2.0
+                  🏌️ {isArchiveMode ? 'East Coast Big Playas 2025 Archive' : 'East Coast Big Playas 2.0'}
                 </h1>
                 <p className="text-xs sm:text-base text-gray-600">
                   Otsego Club • {
@@ -211,7 +212,7 @@ const Dashboard = () => {
               {/* User Role & Controls */}
               <div className="flex items-center space-x-1 sm:space-x-4">
                 {/* Save Status - Hide text on mobile */}
-                {userRole === 'admin' && (
+                {userRole === 'admin' && !isArchiveMode && (
                   <div className="flex items-center">
                     {saveStatus === 'saving' && (
                       <div className="flex items-center text-blue-600">

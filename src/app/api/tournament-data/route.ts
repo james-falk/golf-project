@@ -3,8 +3,11 @@ import { TournamentData } from '@/types/golf';
 import { initialTournamentData } from '@/data/demoData';
 import { kv } from '@vercel/kv';
 import { createClient } from 'redis';
+import archivedTournamentData from '../../../../tournament-data.json';
 
 const TOURNAMENT_DATA_KEY = 'golf-tournament-data';
+const isArchiveMode = process.env.ARCHIVE_MODE === 'true';
+const frozenArchiveData = archivedTournamentData as unknown as TournamentData;
 
 // Fallback in-memory storage when neither KV nor Redis is available
 let fallbackCache: TournamentData | null = null;
@@ -29,6 +32,14 @@ if (isRedisAvailable()) {
 
 // GET - Load tournament data
 export async function GET(request: NextRequest) {
+  // A historical deployment must always render the checked-in snapshot. This
+  // deliberately bypasses KV/Redis so a newer tournament can never change it.
+  if (isArchiveMode) {
+    return NextResponse.json(frozenArchiveData, {
+      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=86400' },
+    });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const updatePlayerGroups = searchParams.get('updatePlayerGroups') === 'true';
@@ -156,6 +167,10 @@ export async function GET(request: NextRequest) {
 
 // POST - Save tournament data (admin only)
 export async function POST(request: NextRequest) {
+  if (isArchiveMode) {
+    return NextResponse.json({ error: 'The 2025 archive is read-only.' }, { status: 405 });
+  }
+
   try {
     const body = await request.json();
     const { data, userRole } = body;
@@ -209,6 +224,10 @@ export async function POST(request: NextRequest) {
 
 // DELETE - Clear cache and reload from file (admin only)
 export async function DELETE(request: NextRequest) {
+  if (isArchiveMode) {
+    return NextResponse.json({ error: 'The 2025 archive is read-only.' }, { status: 405 });
+  }
+
   try {
     const body = await request.json();
     const { userRole } = body;
