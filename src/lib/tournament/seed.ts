@@ -18,12 +18,22 @@ export const classicCourse: Course = {
   ].map(([par, strokeIndex], index) => ({ number: index + 1, par, strokeIndex })),
 };
 
+/**
+ * The confirmed 2026 field. Ids are explicit and permanent: scores, teams and
+ * CTP winners are all keyed by id, so an id must never be reused or reassigned
+ * to a different player. Add a player by appending the next free id; drop one by
+ * deleting the row and retiring its id for good.
+ */
 export const startingRoster: Player[] = [
-  ["Steve", "A"], ["John", "A"], ["Roger", "A"], ["Jeff", "A"], ["Ethan", "A"], ["Jim", "A"],
-  ["Sam", "B"], ["Thomas", "B"], ["Logan", "B"], ["James", "B"], ["Spencer", "B"], ["Kent", "B"],
-  ["Bryce", "C"], ["Tate", "C"], ["Lucas", "C"], ["Mitchell", "C"], ["Greg", "C"], ["Cam", "C"],
-  ["Pete", "D"], ["Brandon", "D"], ["Matt", "D"], ["Aiden", "D"], ["Jake", "D"], ["Maxwell", "D"],
-].map(([name, tier], index) => ({ id: `player-${index + 1}`, name, tier: tier as Player["tier"] })).filter((player) => player.name !== "Tate");
+  ["player-1", "Steve", "A"], ["player-2", "John", "A"], ["player-3", "Roger", "A"],
+  ["player-4", "Jeff", "A"], ["player-5", "Ethan", "A"], ["player-6", "Jim", "A"],
+  ["player-7", "Sam", "B"], ["player-8", "Thomas", "B"], ["player-9", "Logan", "B"],
+  ["player-10", "James", "B"], ["player-11", "Spencer", "B"], ["player-12", "Kent", "B"],
+  ["player-13", "Bryce", "C"], ["player-14", "Lucas", "C"], ["player-15", "Mitchell", "C"],
+  ["player-16", "Greg", "C"], ["player-17", "Cam", "C"], ["player-18", "Matt", "C"],
+  ["player-19", "Pete", "D"], ["player-20", "Brandon", "D"], ["player-21", "Aiden", "D"],
+  ["player-22", "Jake", "D"], ["player-23", "Maxwell", "D"],
+].map(([id, name, tier]) => ({ id, name, tier: tier as Player["tier"] }));
 
 export function makeTeams(players: Player[]) {
   const teamCount = 6;

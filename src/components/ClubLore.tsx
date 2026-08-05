@@ -97,6 +97,11 @@ export function ClubLoreProvider({ children }: { children: React.ReactNode }) {
   </ClubLoreContext.Provider>;
 }
 
+/** Lets any surface open the clubhouse file viewer for a lore photo. */
+export function useClubLore() {
+  return useContext(ClubLoreContext);
+}
+
 export function LorePhoto({ index, label, className = "" }: { index: number; label: string; className?: string }) {
   const lore = useContext(ClubLoreContext);
   const item = loreItems[index];

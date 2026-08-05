@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ClubHome, GalleryPage } from "@/components/ClubHome";
-import { LorePhoto } from "@/components/ClubLore";
 import { ClubPet } from "@/components/ClubPet";
 import { PayoutDashboard } from "@/components/PayoutDashboard";
 import type { AccessRole } from "@/lib/access";
 import { confirmed2026Rules } from "@/lib/tournament/config";
+import { makeCleanTournamentState } from "@/lib/tournament/live-state";
 import { makeMockTournamentState } from "@/lib/tournament/mock-state";
 import { calculateScramblePayouts, calculateSkinPayouts, calculateSkins, skinRoundPot, strokesReceivedOnHole } from "@/lib/tournament/rules";
 import { classicCourse, makeTeams, startingRoster, tributeCourse } from "@/lib/tournament/seed";
@@ -28,11 +28,12 @@ const tabs: Array<{ id: Tab; label: string; mobileLabel: string }> = [
   { id: "central", label: "Scoring", mobileLabel: "Scores" },
   { id: "gallery", label: "Gallery", mobileLabel: "Photos" },
   { id: "setup", label: "Commissioner setup", mobileLabel: "Setup" },
-  { id: "archive", label: "2025 Archive", mobileLabel: "2025" },
+  { id: "archive", label: "Archive", mobileLabel: "Archive" },
 ];
 
+/** An unstarted board: the confirmed field and its teams, and no scores at all. */
 function emptyTournamentState(): TournamentState {
-  return makeMockTournamentState();
+  return makeCleanTournamentState(null);
 }
 
 const cardKey = (day: string, id: string | number) => `${day}:${id}`;
@@ -47,7 +48,6 @@ export function TournamentConsole() {
   const [scrambleScores, setScrambleScores] = useState<Scores>({});
   const [scrambleOfficialTotals, setScrambleOfficialTotals] = useState<Record<string, string>>({});
   const [postings, setPostings] = useState<Partial<Record<RoundKey, RoundPosting>>>({});
-  const [activeTeamId, setActiveTeamId] = useState("team-1");
   const [activeSkinDay, setActiveSkinDay] = useState<SkinDay>("thursday");
   const [activeScrambleDay, setActiveScrambleDay] = useState<ScrambleDay>("friday");
   const [activeScoreDay, setActiveScoreDay] = useState<ScoreDay>("thursday");
@@ -58,6 +58,8 @@ export function TournamentConsole() {
   const [accessError, setAccessError] = useState("");
   const [syncState, setSyncState] = useState<"local" | "saving" | "synced" | "error">("local");
   const [sharedStorage, setSharedStorage] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [musicPlaying, setMusicPlaying] = useState(false);
   const musicRef = useRef<HTMLAudioElement | null>(null);
@@ -139,16 +141,22 @@ export function TournamentConsole() {
     let cancelled = false;
     const load = async () => {
       let state: TournamentState | null = null;
+      let shared = false;
       try {
         const response = await fetch("/api/tournament-state", { cache: "no-store" });
-        const data = await response.json() as { state: TournamentState | null; shared: boolean };
+        const data = await response.json() as { state: TournamentState | null; shared: boolean; locked: boolean };
         if (response.ok) {
           state = data.state;
+          shared = data.shared;
           setSharedStorage(data.shared);
+          setLocked(data.locked);
           setSyncState(data.shared ? "synced" : "local");
         }
       } catch { setSyncState("local"); }
-      if (!state && accessRole === "scorekeeper") {
+      // A local draft may only stand in when there is no shared ledger at all. Once
+      // Postgres is answering it is the source of truth, so a stale draft from an
+      // earlier test can never be replayed over a started tournament.
+      if (!state && !shared && accessRole === "scorekeeper") {
         const saved = window.localStorage.getItem(scorekeeperDraftKey);
         if (saved) try { state = JSON.parse(saved) as TournamentState; } catch { /* Use the official seed. */ }
       }
@@ -180,10 +188,7 @@ export function TournamentConsole() {
   const skinResults = useMemo(() => calculateSkins(players, tributeCourse, activeSkinScores, confirmed2026Rules.skinRound), [players, activeSkinScores]);
   const skinPot = skinRoundPot(players.length, confirmed2026Rules.skinRound);
   const skinPayouts = calculateSkinPayouts(players.length, skinResults, confirmed2026Rules.skinRound);
-  const scrambleResults = teams.map((team) => {
-    const card = scrambleScores[cardKey(activeScrambleDay, team.id)];
-    return { teamId: team.id, total: card?.length === 18 ? sumScores(card) : 0 };
-  });
+  const scrambleResults = teams.map((team) => ({ teamId: team.id, total: teamTotal(scrambleOfficialTotals, activeScrambleDay, team.id) }));
   const scramblePayouts = calculateScramblePayouts(scrambleResults, players.length, confirmed2026Rules.scrambleRound);
   const activeClosestToPin = Object.fromEntries(confirmed2026Rules.skinRound.closestToPinHoleNumbers.flatMap((hole) => closestToPin[cardKey(activeSkinDay, hole)] ? [[hole, closestToPin[cardKey(activeSkinDay, hole)]]] : []));
   const activeSkinRoundKey: RoundKey = `skins-${activeSkinDay}`;
@@ -196,11 +201,7 @@ export function TournamentConsole() {
     return card?.length === 18;
   });
   const skinCtpReady = confirmed2026Rules.skinRound.closestToPinHoleNumbers.every((hole) => Boolean(closestToPin[cardKey(activeSkinDay, hole)]));
-  const scrambleCardsReady = teams.every((team) => {
-    const key = cardKey(activeScrambleDay, team.id);
-    const card = scrambleScores[key];
-    return card?.length === 18 && Boolean(scrambleOfficialTotals[key]) && Number(scrambleOfficialTotals[key]) === sumScores(card);
-  });
+  const scrambleCardsReady = teams.every((team) => teamTotal(scrambleOfficialTotals, activeScrambleDay, team.id) > 0);
 
   const publishRound = (key: RoundKey) => setPostings((current) => ({
     ...current,
@@ -214,10 +215,6 @@ export function TournamentConsole() {
   const updateSkinScore = (playerId: string, holeNumber: number, value: string) => setSkinScores((current) => ({
     ...current,
     [cardKey(activeSkinDay, playerId)]: updateHoleScore(current[cardKey(activeSkinDay, playerId)], holeNumber, value),
-  }));
-  const updateScrambleScore = (teamId: string, holeNumber: number, value: string) => setScrambleScores((current) => ({
-    ...current,
-    [cardKey(activeScrambleDay, teamId)]: updateHoleScore(current[cardKey(activeScrambleDay, teamId)], holeNumber, value),
   }));
 
   const enterClubhouse = async () => {
@@ -246,6 +243,43 @@ export function TournamentConsole() {
     await fetch("/api/access", { method: "DELETE" });
     setAccessRole(null);
     setTab("home");
+  };
+
+  /**
+   * Fills the board with throwaway scores for testing, or starts the tournament
+   * for real. Starting clears every score and locks the roster and the teams; from
+   * then on the site can only enter scores.
+   */
+  const runLifecycleAction = async (action: "seed-preview" | "start-tournament") => {
+    if (action === "start-tournament" && !window.confirm(
+      "Start the tournament?\n\nThis erases every score currently on the board, locks in the 23-player roster and both days of teams, and cannot be undone from the site.",
+    )) return;
+
+    setLifecycleBusy(true);
+    try {
+      if (!sharedStorage) {
+        // No shared ledger to start; preview data is still useful for local testing.
+        if (action === "seed-preview") applyTournamentState(makeMockTournamentState(), { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings });
+        return;
+      }
+      const response = await fetch("/api/tournament-state", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
+      const data = await response.json() as { state?: TournamentState; locked?: boolean; error?: string };
+      if (!response.ok || !data.state) {
+        setSyncState("error");
+        if (data.error) window.alert(data.error);
+        return;
+      }
+      window.localStorage.removeItem(scorekeeperDraftKey);
+      setHydrated(false);
+      applyTournamentState(data.state, { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings });
+      setLocked(Boolean(data.locked));
+      setSyncState("synced");
+      setHydrated(true);
+    } catch {
+      setSyncState("error");
+    } finally {
+      setLifecycleBusy(false);
+    }
   };
 
   const switchTab = (nextTab: Tab) => {
@@ -314,15 +348,15 @@ export function TournamentConsole() {
           skinScores={skinScores}
           allClosestToPin={closestToPin}
           teamsByDay={teamsByDay}
-          scrambleScores={scrambleScores}
+          scrambleTotals={scrambleOfficialTotals}
           postings={postings}
           openSkins={() => switchTab("skins")}
           openScramble={() => switchTab("scramble")}
         />}
-        {tab === "gallery" && <GalleryPage />}
+        {tab === "gallery" && <GalleryPage canEdit={canEdit} />}
         {tab === "skins" && (canEdit || skinIsPosted ? <SkinsBoard canEdit={canEdit} activeDay={activeSkinDay} backToDay={() => switchTab("central")} players={players} scores={skinScores} updateScore={updateSkinScore} closestToPin={closestToPin} setClosestToPin={setClosestToPin} posting={postings[activeSkinRoundKey]} canPublish={skinCardsReady && skinCtpReady} publish={() => publishRound(activeSkinRoundKey)} returnToReview={() => returnRoundToReview(activeSkinRoundKey)} /> : <AwaitingBoard course="Skins" day={activeSkinDay} days={skinDays} onDayChange={setActiveSkinDay} />)}
-        {tab === "scramble" && (canEdit || scrambleIsPosted ? <ScrambleBoard canEdit={canEdit} activeDay={activeScrambleDay} backToDay={() => switchTab("central")} teams={teams} players={players} scores={scrambleScores} activeTeamId={activeTeamId} setActiveTeamId={setActiveTeamId} updateScore={updateScrambleScore} officialTotals={scrambleOfficialTotals} setOfficialTotals={setScrambleOfficialTotals} payouts={scramblePayouts} posting={postings[activeScrambleRoundKey]} canPublish={scrambleCardsReady} publish={() => publishRound(activeScrambleRoundKey)} returnToReview={() => returnRoundToReview(activeScrambleRoundKey)} /> : <AwaitingBoard course="Scramble" day={activeScrambleDay} days={scrambleDays} onDayChange={setActiveScrambleDay} />)}
-        {tab === "setup" && canEdit && <Setup activeDay={activeScrambleDay} setActiveDay={setActiveScrambleDay} players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} resetAllTeams={() => setTeamsByDay({ friday: makeTeams(startingRoster), saturday: makeTeams(startingRoster) })} />}
+        {tab === "scramble" && (canEdit || scrambleIsPosted ? <ScrambleBoard canEdit={canEdit} activeDay={activeScrambleDay} backToDay={() => switchTab("central")} teams={teams} players={players} officialTotals={scrambleOfficialTotals} setOfficialTotals={setScrambleOfficialTotals} payouts={scramblePayouts} posting={postings[activeScrambleRoundKey]} canPublish={scrambleCardsReady} publish={() => publishRound(activeScrambleRoundKey)} returnToReview={() => returnRoundToReview(activeScrambleRoundKey)} /> : <AwaitingBoard course="Scramble" day={activeScrambleDay} days={scrambleDays} onDayChange={setActiveScrambleDay} />)}
+        {tab === "setup" && canEdit && <Setup activeDay={activeScrambleDay} setActiveDay={setActiveScrambleDay} players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} resetAllTeams={() => setTeamsByDay({ friday: makeTeams(startingRoster), saturday: makeTeams(startingRoster) })} locked={locked} lifecycleBusy={lifecycleBusy} runLifecycleAction={runLifecycleAction} />}
         {tab === "archive" && <Archive />}
       </div>}
       <ClubPet quiet={quietPet} />
@@ -338,7 +372,7 @@ function AccessGate({ code, setCode, error, enter }: { code: string; setCode: (v
   return <main className="story-gate min-h-screen"><div className="story-gate-photo" aria-hidden="true" /><div className="story-gate-shade" /><section className="story-gate-card"><BrandLogo className="story-gate-logo" priority sizes="128px" /><p className="story-eyebrow">Otsego Club · Gaylord, Michigan</p><h1>Welcome to<br /><em>the inner circle.</em></h1><p className="story-gate-deck">The official 2026 proceedings of the East Coast Big Playas.</p><form onSubmit={(event) => { event.preventDefault(); enter(); }}><label htmlFor="clubhouse-code">Clubhouse passcode</label><div><input id="clubhouse-code" autoComplete="current-password" autoFocus type="password" value={code} onChange={(event) => setCode(event.target.value)} placeholder="Enter passcode" /><button>Enter</button></div>{error && <p role="alert" className="story-gate-error">{error}</p>}</form></section><p className="story-gate-foot">Private tournament ledger · Est. under disputed circumstances</p></main>;
 }
 
-function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, setActiveRoundType, skinPot, skinPayouts, skinResults, closestToPin, scrambleResults, scramblePayouts, teams, skinIsPosted, scrambleIsPosted, canEdit, skinScores, allClosestToPin, teamsByDay, scrambleScores, postings, openSkins, openScramble }: {
+function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, setActiveRoundType, skinPot, skinPayouts, skinResults, closestToPin, scrambleResults, scramblePayouts, teams, skinIsPosted, scrambleIsPosted, canEdit, skinScores, allClosestToPin, teamsByDay, scrambleTotals, postings, openSkins, openScramble }: {
   players: Player[];
   activeScoreDay: ScoreDay;
   setActiveScoreDay: (day: ScoreDay) => void;
@@ -357,7 +391,7 @@ function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, 
   skinScores: Scores;
   allClosestToPin: Record<string, string>;
   teamsByDay: Record<ScrambleDay, Team[]>;
-  scrambleScores: Scores;
+  scrambleTotals: Record<string, string>;
   postings: Partial<Record<RoundKey, RoundPosting>>;
   openSkins: () => void;
   openScramble: () => void;
@@ -369,7 +403,7 @@ function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, 
     {(["thursday", "friday", "saturday", "payouts"] as const).map((day) => <button key={day} type="button" aria-pressed={activeScoreDay === day} onClick={() => setActiveScoreDay(day)}><strong>{day === "payouts" ? "Total payouts" : capitalize(day)}</strong><small>${day === "payouts" ? tournamentPot : dayPot(day)}</small></button>)}
   </nav>;
 
-  if (activeScoreDay === "payouts") return <div className="space-y-6">{dayNav}<PayoutDashboard players={players} skinScores={skinScores} closestToPin={allClosestToPin} teamsByDay={teamsByDay} scrambleScores={scrambleScores} postings={postings} canEdit={canEdit} /></div>;
+  if (activeScoreDay === "payouts") return <div className="space-y-6">{dayNav}<PayoutDashboard players={players} skinScores={skinScores} closestToPin={allClosestToPin} teamsByDay={teamsByDay} scrambleTotals={scrambleTotals} postings={postings} canEdit={canEdit} /></div>;
 
   const selectedRound: RoundType = activeScoreDay === "thursday" ? "skins" : activeRoundType;
   const isSkins = selectedRound === "skins";
@@ -486,14 +520,44 @@ function TributePlayerScorecard({ player, playerNumber, activeDay, scores, canEd
   </article>;
 }
 
-function ScrambleBoard({ canEdit, activeDay, backToDay, teams, players, scores, activeTeamId, setActiveTeamId, updateScore, officialTotals, setOfficialTotals, payouts, posting, canPublish, publish, returnToReview }: { canEdit: boolean; activeDay: ScrambleDay; backToDay: () => void; teams: ReturnType<typeof makeTeams>; players: Player[]; scores: Scores; activeTeamId: string; setActiveTeamId: (id: string) => void; updateScore: (id: string, hole: number, value: string) => void; officialTotals: Record<string, string>; setOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; payouts: ReturnType<typeof calculateScramblePayouts>; posting?: RoundPosting; canPublish: boolean; publish: () => void; returnToReview: () => void }) {
-  const team = teams.find((entry) => entry.id === activeTeamId) ?? teams[0]; const teamKey = cardKey(activeDay, team.id); const total = sumScores(scores[teamKey]); const official = officialTotals[teamKey] ?? ""; const enteredHoles = scores[teamKey]?.length ?? 0;
-  return <div className="space-y-6"><button type="button" className="scoring-back" onClick={backToDay}>← {capitalize(activeDay)} overview</button><SectionTitle eyebrow={`${capitalize(activeDay)} · Scramble`} title="18-hole team scramble" text="" />
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]"><section className="scorecard-sheet p-5 text-[#12332d] sm:p-7"><div className="flex flex-wrap items-end justify-between gap-4"><div><label className="label">Team card</label><select value={team.id} onChange={(event) => setActiveTeamId(event.target.value)} className="field mt-2">{teams.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select><p className="mt-2 text-sm text-[#628075]">{team.playerIds.map((id) => players.find((player) => player.id === id)?.name).join(" · ")}</p></div><div className="text-right"><p className="club-ledger-label">Team total</p><p className="club-ledger-total">{total || "—"}</p></div></div><ScoreGrid disabled={!canEdit} course={classicCourse.holes} scores={scores[teamKey]} onChange={(hole, value) => updateScore(team.id, hole, value)} />
-      <div className="scorecard-check mt-5 grid gap-3 pt-5 sm:grid-cols-[minmax(0,1fr)_auto]"><label><span className="label block">Official card total</span><input disabled={!canEdit} inputMode="numeric" value={official} onChange={(event) => setOfficialTotals((current) => ({ ...current, [teamKey]: event.target.value }))} className="field mt-2 block w-full disabled:opacity-70" placeholder="Enter marked-card total" /></label><div className={`self-end border px-4 py-3 text-sm font-semibold ${official && (enteredHoles !== 18 || Number(official) !== total) ? "border-rose-400 bg-rose-100 text-rose-800" : "border-emerald-500/40 bg-emerald-100 text-emerald-800"}`}>{enteredHoles !== 18 ? `${18 - enteredHoles} holes still missing` : official ? Number(official) === total ? "✓ Totals match" : `Review: entered ${total}, card says ${official}` : "Add official total to verify"}</div></div></section>
-      <aside className="space-y-4">{canEdit && <PublicationPanel posting={posting} ready={canPublish} incompleteText="All six team cards and official totals must be complete and matching." publish={publish} returnToReview={returnToReview} />}<div className="club-card p-5"><p className="club-kicker">Committee preview</p><div className="mt-4 space-y-3">{teams.map((entry) => { const teamPayout = payouts.find((item) => item.teamId === entry.id); const teamTotal = sumScores(scores[cardKey(activeDay, entry.id)]); return <div key={entry.id} className="border-b border-[#bca062]/35 p-3"><div className="flex justify-between gap-2 font-semibold"><span>{entry.name}</span><span>{teamTotal || "—"}</span></div><p className="mt-1 text-xs text-stone-400">{teamPayout ? `${teamPayout.place}${teamPayout.place === 1 ? "st" : "nd"} · $${Math.floor(teamPayout.teamPayout)} team payout` : "Awaiting final ranking"}</p></div> })}</div></div><LorePhoto index={15} label="Putting laboratory · confidential" className="lore-photo-wide" /></aside>
-    </div></div>;
+/**
+ * The scramble is scored as one number per team, not hole by hole. Six teams are
+ * listed top to bottom with their players, the team score, and how that score
+ * finished against the card.
+ */
+function ScrambleBoard({ canEdit, activeDay, backToDay, teams, players, officialTotals, setOfficialTotals, payouts, posting, canPublish, publish, returnToReview }: { canEdit: boolean; activeDay: ScrambleDay; backToDay: () => void; teams: ReturnType<typeof makeTeams>; players: Player[]; officialTotals: Record<string, string>; setOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; payouts: ReturnType<typeof calculateScramblePayouts>; posting?: RoundPosting; canPublish: boolean; publish: () => void; returnToReview: () => void }) {
+  const par = classicCourse.holes.reduce((sum, hole) => sum + hole.par, 0);
+
+  return <div className="space-y-6">
+    <button type="button" className="scoring-back" onClick={backToDay}>← {capitalize(activeDay)} overview</button>
+    <SectionTitle eyebrow={`${capitalize(activeDay)} · Scramble`} title="18-hole team scramble" text={`The Classic · par ${par}`} />
+    {canEdit ? <PublicationPanel posting={posting} ready={canPublish} incompleteText="Every team needs a score before this round can be posted." publish={publish} returnToReview={returnToReview} /> : null}
+    <div className="scramble-team-list">
+      {teams.map((team, index) => {
+        const key = cardKey(activeDay, team.id);
+        const total = teamTotal(officialTotals, activeDay, team.id);
+        const payout = payouts.find((entry) => entry.teamId === team.id);
+        return <section key={team.id} className="scramble-team-card" aria-label={team.name}>
+          <header className="scramble-team-head">
+            <span className="scramble-team-rank">{index + 1}</span>
+            <h3>{team.name}</h3>
+            {payout ? <span className="scramble-team-payout">{ordinalPlace(payout.place)} · ${Math.floor(payout.teamPayout)}</span> : null}
+          </header>
+          <ul className="scramble-team-players">
+            {team.playerIds.map((id) => <li key={id}>{players.find((player) => player.id === id)?.name ?? "—"}</li>)}
+          </ul>
+          <div className="scramble-team-score">
+            {canEdit
+              ? <label><span>Team score</span><input inputMode="numeric" value={officialTotals[key] ?? ""} onChange={(event) => setOfficialTotals((current) => ({ ...current, [key]: event.target.value.replace(/[^0-9]/g, "") }))} placeholder="—" aria-label={`${team.name} team score`} /></label>
+              : <strong>{total || "—"}</strong>}
+            <span className={`scramble-team-topar ${total && total < par ? "is-under" : ""}`}>{formatToPar(total, par)}</span>
+          </div>
+        </section>;
+      })}
+    </div>
+  </div>;
 }
+
 
 function PublicationPanel({ posting, ready, incompleteText, publish, returnToReview }: { posting?: RoundPosting; ready: boolean; incompleteText: string; publish: () => void; returnToReview: () => void }) {
   const isPosted = posting?.status === "posted";
@@ -508,6 +572,31 @@ function PublicationPanel({ posting, ready, incompleteText, publish, returnToRev
   </section>;
 }
 
+/**
+ * The one-way door between testing and the real tournament. Before the start it
+ * offers throwaway preview data; after it, it is a status card only — the site
+ * has no way back.
+ */
+function TournamentLifecycle({ locked, busy, run }: { locked: boolean; busy: boolean; run: (action: "seed-preview" | "start-tournament") => void }) {
+  if (locked) {
+    return <section className="publication-panel is-posted p-5">
+      <p className="club-kicker">Tournament status</p>
+      <h3 className="club-card-title mt-2">Started &amp; locked</h3>
+      <p className="mt-3 text-sm leading-6 text-stone-300">The roster and both days of teams are locked in, and the ledger is the permanent record. Scores entered from here or from Telegram are saved and kept. Unlocking is a backend-only action.</p>
+    </section>;
+  }
+
+  return <section className="publication-panel p-5">
+    <p className="club-kicker">Tournament status</p>
+    <h3 className="club-card-title mt-2">Not started</h3>
+    <p className="mt-3 text-sm leading-6 text-stone-300">Nothing on the board is permanent yet. Load preview data to test the workflow, then start the tournament to clear it all and lock the field in for real.</p>
+    <div className="mt-4 grid gap-2">
+      <button type="button" disabled={busy} onClick={() => run("seed-preview")} className="publication-secondary">Load preview data for testing</button>
+      <button type="button" disabled={busy} onClick={() => run("start-tournament")} className="publication-primary">Start the tournament &amp; lock the field</button>
+    </div>
+  </section>;
+}
+
 function AwaitingBoard<T extends string>({ course, day, days, onDayChange }: { course: string; day: T; days: readonly T[]; onDayChange: (day: T) => void }) {
   return <div className="space-y-6"><SectionTitle eyebrow={`${capitalize(day)} · ${course}`} title="No scores yet." text="" /><DayPicker days={days} activeDay={day} onChange={onDayChange} /><section className="club-hero board-awaiting p-8 text-center sm:p-12"><h3 className="club-display text-3xl sm:text-5xl">Still counting.</h3></section></div>;
 }
@@ -516,19 +605,32 @@ function BoardClosed() {
   return <div className="board-closed mt-5"><span aria-hidden="true">19</span><div><strong>No scores yet.</strong></div></div>;
 }
 
-function Setup({ activeDay, setActiveDay, players, setPlayers, teams, setTeams, resetAllTeams }: { activeDay: ScrambleDay; setActiveDay: (day: ScrambleDay) => void; players: Player[]; setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; teams: Team[]; setTeams: React.Dispatch<React.SetStateAction<Team[]>>; resetAllTeams: () => void }) {
-  return <div className="space-y-6"><SectionTitle eyebrow="Commissioner workspace" title="Roster, bands & teams" text="Roster changes, stroke bands and team assignments save to the shared tournament board for every authorized scorekeeper." />
-    <section className="club-ledger p-5 text-[#12332d] sm:p-7"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><p className="club-ledger-label">Official field</p><h3 className="club-card-title !text-[#173f35]">Player stroke bands</h3></div><button onClick={() => { setPlayers(startingRoster); resetAllTeams(); }} className="border border-[#8d794f] px-4 py-2 text-sm font-semibold hover:bg-[#ded1b4]">Reset roster & both days</button></div><div className="mb-5 grid grid-cols-4 border border-[#a99670] bg-[#f8f2e5]">{(["A", "B", "C", "D"] as const).map((tier) => <div key={tier} className="border-r border-[#a99670] p-3 text-center last:border-r-0"><p className="font-serif text-xl font-bold">{tier}</p><p className="text-xs text-[#61766d]">{players.filter((player) => player.tier === tier).length} players · {confirmed2026Rules.skinRound.tierStrokes[tier]} strokes</p></div>)}</div><div className="grid gap-px border border-[#a99670] bg-[#a99670] sm:grid-cols-2 lg:grid-cols-3">{players.map((player) => <div key={player.id} className="flex items-center justify-between bg-[#f8f2e5] px-4 py-3"><span className="font-semibold">{player.name}</span><select aria-label={`${player.name} stroke band`} value={player.tier} onChange={(event) => setPlayers((current) => current.map((entry) => entry.id === player.id ? { ...entry, tier: event.target.value as Player["tier"] } : entry))} className="field !min-h-0 !py-1 text-sm font-semibold"><option value="A">A · 0</option><option value="B">B · 6</option><option value="C">C · 12</option><option value="D">D · 18</option></select></div>)}</div></section>
-    <section className="club-card p-5 sm:p-7"><p className="club-kicker">The Classic pairings</p><h3 className="club-card-title mt-1">{capitalize(activeDay)} · six teams of four</h3><p className="mt-2 text-sm text-stone-300">Friday and Saturday are separate. Rename teams or swap any player below; selecting someone already assigned automatically swaps the two positions.</p><div className="mt-4"><DayPicker days={scrambleDays} activeDay={activeDay} onChange={setActiveDay} /></div><div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{teams.map((team) => <div key={team.id} className="border border-[#bca062]/55 bg-black/15 p-4"><input aria-label={`${team.name} name`} value={team.name} onChange={(event) => setTeams((current) => current.map((entry) => entry.id === team.id ? { ...entry, name: event.target.value } : entry))} className="w-full border-b border-[#bca062]/45 bg-transparent pb-2 font-serif text-lg font-bold text-[#f1e6ce] outline-none" /> <div className="mt-3 space-y-2">{team.playerIds.map((id, slotIndex) => <select aria-label={`${team.name} player ${slotIndex + 1}`} key={`${team.id}-${slotIndex}`} value={id} onChange={(event) => setTeams((current) => swapTeamPlayer(current, team.id, slotIndex, event.target.value))} className="field w-full text-sm">{players.map((player) => <option key={player.id} value={player.id}>{player.name} · {player.tier}</option>)}</select>)}</div></div>)}</div></section><div className="lore-inline-row"><LorePhoto index={1} label="Player identification department" /><LorePhoto index={4} label="Pairings committee in session" /></div>
+function Setup({ activeDay, setActiveDay, players, setPlayers, teams, setTeams, resetAllTeams, locked, lifecycleBusy, runLifecycleAction }: { activeDay: ScrambleDay; setActiveDay: (day: ScrambleDay) => void; players: Player[]; setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; teams: Team[]; setTeams: React.Dispatch<React.SetStateAction<Team[]>>; resetAllTeams: () => void; locked: boolean; lifecycleBusy: boolean; runLifecycleAction: (action: "seed-preview" | "start-tournament") => void }) {
+  return <div className="space-y-6"><SectionTitle eyebrow="Commissioner workspace" title="Roster, bands & teams" text={locked ? "The tournament has started. The roster and both days of teams are locked; this page is now a read-only record of the field. Score entry is unaffected." : "Arrange the field and the teams, then start the tournament to lock them in and clear the board."} />
+    <TournamentLifecycle locked={locked} busy={lifecycleBusy} run={runLifecycleAction} />
+    <section className="club-ledger p-5 text-[#12332d] sm:p-7"><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><p className="club-ledger-label">Official field</p><h3 className="club-card-title !text-[#173f35]">Player stroke bands</h3></div>{locked ? <span className="border border-[#8d794f] px-4 py-2 text-sm font-semibold text-[#61766d]">Locked field</span> : <button onClick={() => { setPlayers(startingRoster); resetAllTeams(); }} className="border border-[#8d794f] px-4 py-2 text-sm font-semibold hover:bg-[#ded1b4]">Reset roster & both days</button>}</div><div className="mb-5 grid grid-cols-4 border border-[#a99670] bg-[#f8f2e5]">{(["A", "B", "C", "D"] as const).map((tier) => <div key={tier} className="border-r border-[#a99670] p-3 text-center last:border-r-0"><p className="font-serif text-xl font-bold">{tier}</p><p className="text-xs text-[#61766d]">{players.filter((player) => player.tier === tier).length} players · {confirmed2026Rules.skinRound.tierStrokes[tier]} strokes</p></div>)}</div><div className="grid gap-px border border-[#a99670] bg-[#a99670] sm:grid-cols-2 lg:grid-cols-3">{players.map((player) => <div key={player.id} className="flex items-center justify-between bg-[#f8f2e5] px-4 py-3"><span className="font-semibold">{player.name}</span><select disabled={locked} aria-label={`${player.name} stroke band`} value={player.tier} onChange={(event) => setPlayers((current) => current.map((entry) => entry.id === player.id ? { ...entry, tier: event.target.value as Player["tier"] } : entry))} className="field !min-h-0 !py-1 text-sm font-semibold"><option value="A">A · 0</option><option value="B">B · 6</option><option value="C">C · 12</option><option value="D">D · 18</option></select></div>)}</div></section>
+    <section className="club-card p-5 sm:p-7"><p className="club-kicker">The Classic pairings</p><h3 className="club-card-title mt-1">{capitalize(activeDay)} · six teams of four</h3><p className="mt-2 text-sm text-stone-300">{locked ? "These pairings are locked for the tournament. Changing them is a backend-only action." : "Friday and Saturday are separate. Rename teams or swap any player below; selecting someone already assigned automatically swaps the two positions."}</p><div className="mt-4"><DayPicker days={scrambleDays} activeDay={activeDay} onChange={setActiveDay} /></div><div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{teams.map((team) => <div key={team.id} className="border border-[#bca062]/55 bg-black/15 p-4"><input disabled={locked} aria-label={`${team.name} name`} value={team.name} onChange={(event) => setTeams((current) => current.map((entry) => entry.id === team.id ? { ...entry, name: event.target.value } : entry))} className="w-full border-b border-[#bca062]/45 bg-transparent pb-2 font-serif text-lg font-bold text-[#f1e6ce] outline-none" /> <div className="mt-3 space-y-2">{team.playerIds.map((id, slotIndex) => <select disabled={locked} aria-label={`${team.name} player ${slotIndex + 1}`} key={`${team.id}-${slotIndex}`} value={id} onChange={(event) => setTeams((current) => swapTeamPlayer(current, team.id, slotIndex, event.target.value))} className="field w-full text-sm">{players.map((player) => <option key={player.id} value={player.id}>{player.name} · {player.tier}</option>)}</select>)}</div></div>)}</div></section>
   </div>;
 }
 
-function Archive() { return <div className="mx-auto max-w-4xl"><SectionTitle eyebrow="The club record book" title="2025 Tournament Archive" text="Last year remains preserved as a separate read-only site, exactly where it belongs: available for the stories, safely away from this year’s official ledger." /><section className="club-hero mt-7 grid gap-7 p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-end"><div><p className="club-kicker">Previous championship</p><h3 className="club-display mt-3 text-3xl sm:text-4xl">Take a look back<br />at the 2025 board.</h3><p className="mt-4 max-w-xl leading-7 text-[#e8ddc2]">The archived site cannot alter 2026 scores. Its checked-in tournament snapshot is preserved while any missing historical details can be restored later from the original screenshots.</p></div><a href="https://tournament-archive-2025.vercel.app" target="_blank" rel="noreferrer" className="inline-flex min-h-12 items-center justify-center border border-[#d6ba73] bg-[#e5d0a0] px-6 py-3 font-serif font-bold text-[#173f35] hover:bg-[#f0deb2]">Open the 2025 Archive ↗</a></section><div className="lore-inline-row mt-6"><LorePhoto index={17} label="Assistant club historian" /><LorePhoto index={19} label="Recovery room records" /></div></div>; }
+function Archive() {
+  return <div className="mx-auto max-w-4xl">
+    <SectionTitle eyebrow="The club record book" title="Archive" text="Previous tournaments, preserved exactly as they finished." />
+    <div className="archive-year-list mt-7">
+      <a href="https://tournament-archive-2025.vercel.app" target="_blank" rel="noreferrer" className="archive-year">
+        <span className="archive-year-number">2025</span>
+        <span className="archive-year-detail">Open the 2025 board ↗</span>
+      </a>
+    </div>
+  </div>;
+}
 
 function DayPicker<T extends string>({ days, activeDay, onChange, compact = false }: { days: readonly T[]; activeDay: T; onChange: (day: T) => void; compact?: boolean }) { return <div className={`day-picker ${compact ? "inline-flex" : "flex w-fit"}`} role="group" aria-label="Select tournament day">{days.map((day) => <button key={day} type="button" aria-pressed={activeDay === day} onClick={() => onChange(day)} className={`day-picker-button ${activeDay === day ? "day-picker-active" : ""}`}>{capitalize(day)}</button>)}</div>; }
-function ScoreGrid({ course, scores, onChange, disabled = false, showHandicap = false }: { course: typeof tributeCourse.holes; scores: HoleScore[] | undefined; onChange: (hole: number, value: string) => void; disabled?: boolean; showHandicap?: boolean }) { return <div className="score-grid mt-7 grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-9">{course.map((hole) => { const value = scores?.find((item) => item.holeNumber === hole.number)?.strokes ?? ""; return <label key={hole.number} className="score-cell text-center"><span className="block text-[11px] font-bold uppercase tracking-wider text-[#57776a]">Hole {hole.number}</span><span className="mt-1 block text-[10px] text-[#789087]">Par {hole.par}{showHandicap ? ` · HCP ${hole.strokeIndex}` : ""}</span><input disabled={disabled} aria-label={`Hole ${hole.number} score`} value={value} inputMode="numeric" onChange={(event) => onChange(hole.number, event.target.value)} className="mt-1 w-full bg-transparent text-center font-serif text-2xl font-bold outline-none disabled:cursor-default" placeholder="—" /></label> })}</div>; }
 function SectionTitle({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) { return <section><p className="club-kicker">{eyebrow}</p><h2 className="club-display mt-2 text-3xl sm:text-4xl">{title}</h2>{text && <p className="mt-3 max-w-2xl leading-7 text-stone-300">{text}</p>}</section>; }
 function Stat({ label, value, detail }: { label: string; value: string; detail: string }) { return <div className="club-stat min-w-0 p-3 sm:p-4"><p>{label}</p><p className="club-stat-value mt-2 break-words">{value}</p>{detail && <p className="mt-1 text-xs text-[#c5b48f]">{detail}</p>}</div>; }
+function teamTotal(officialTotals: Record<string, string>, day: string, teamId: string) { return Number(officialTotals[cardKey(day, teamId)]) || 0; }
+function formatToPar(total: number, par: number) { if (!total) return "\u2014"; const difference = total - par; return difference === 0 ? "Even" : difference > 0 ? `+${difference}` : String(difference); }
+function ordinalPlace(place: 1 | 2) { return place === 1 ? "1st" : "2nd"; }
 function sumScores(scores: HoleScore[] | undefined) { return scores?.reduce((sum, score) => sum + score.strokes, 0) ?? 0; }
 function updateHoleScore(scores: HoleScore[] | undefined, holeNumber: number, rawValue: string) { const value = Number(rawValue); const rest = (scores ?? []).filter((score) => score.holeNumber !== holeNumber); return Number.isInteger(value) && value > 0 && value < 20 ? [...rest, { holeNumber, strokes: value }].sort((a, b) => a.holeNumber - b.holeNumber) : rest; }
 function teamName(teams: ReturnType<typeof makeTeams>, teamId: string) { return teams.find((team) => team.id === teamId)?.name ?? "Unknown team"; }

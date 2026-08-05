@@ -14,12 +14,12 @@ const skinDays: SkinDay[] = ["thursday", "friday", "saturday"];
 const scrambleDays: ScrambleDay[] = ["friday", "saturday"];
 const cardKey = (day: string, id: string | number) => `${day}:${id}`;
 
-export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay, scrambleScores, postings, canEdit }: {
+export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay, scrambleTotals, postings, canEdit }: {
   players: Player[];
   skinScores: Scores;
   closestToPin: Record<string, string>;
   teamsByDay: Record<ScrambleDay, Team[]>;
-  scrambleScores: Scores;
+  scrambleTotals: Record<string, string>;
   postings: Partial<Record<RoundKey, RoundPosting>>;
   canEdit: boolean;
 }) {
@@ -41,12 +41,9 @@ export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay,
 
   const scrambleRounds = useMemo(() => includedScrambleDays.map((day) => {
     const teams = teamsByDay[day];
-    const results = teams.map((team) => {
-      const card = scrambleScores[cardKey(day, team.id)];
-      return { teamId: team.id, total: card?.length === 18 ? sumScores(card) : 0 };
-    });
+    const results = teams.map((team) => ({ teamId: team.id, total: Number(scrambleTotals[cardKey(day, team.id)]) || 0 }));
     return { day, teams, payouts: calculateScramblePayouts(results, players.length, confirmed2026Rules.scrambleRound) };
-  }), [includedScrambleDays, players.length, scrambleScores, teamsByDay]);
+  }), [includedScrambleDays, players.length, scrambleTotals, teamsByDay]);
 
   const payoutRows = useMemo(() => calculatePlayerPayoutBreakdowns(players, skinRounds, scrambleRounds, confirmed2026Rules.skinRound.closestToPinPrize), [players, scrambleRounds, skinRounds]);
   const selectedPlayer = players.find((player) => player.id === selectedPlayerId) ?? players[0];
@@ -83,17 +80,17 @@ export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay,
       <aside className="club-card self-start p-5"><p className="club-kicker">Current leader</p><p className="club-display mt-3 text-3xl">{leader && leader.total > 0 ? players.find((player) => player.id === leader.playerId)?.name : "Still counting"}</p><p className="mt-2 text-2xl font-bold text-[#ead292]">{leader ? formatMoney(leader.total) : "$0"}</p>{canEdit ? <p className="mt-3 text-xs leading-5 text-stone-400">Draft calculations update as complete cards are entered. Results become official when each round is posted.</p> : null}</aside>
     </section>
 
-    {selectedPlayer ? <PlayerLedger player={selectedPlayer} scope={scope} skinRounds={skinRounds} scrambleRounds={scrambleRounds} skinScores={skinScores} scrambleScores={scrambleScores} teamsByDay={teamsByDay} postings={postings} /> : null}
+    {selectedPlayer ? <PlayerLedger player={selectedPlayer} scope={scope} skinRounds={skinRounds} scrambleRounds={scrambleRounds} skinScores={skinScores} scrambleTotals={scrambleTotals} teamsByDay={teamsByDay} postings={postings} /> : null}
   </div>;
 }
 
-function PlayerLedger({ player, scope, skinRounds, scrambleRounds, skinScores, scrambleScores, teamsByDay, postings }: {
+function PlayerLedger({ player, scope, skinRounds, scrambleRounds, skinScores, scrambleTotals, teamsByDay, postings }: {
   player: Player;
   scope: PayoutScope;
   skinRounds: Array<{ day: SkinDay; results: ReturnType<typeof calculateSkins>; payoutByHole: Record<number, number>; closestToPinWinnerIds: string[] }>;
   scrambleRounds: Array<{ day: ScrambleDay; teams: Team[]; payouts: ReturnType<typeof calculateScramblePayouts> }>;
   skinScores: Scores;
-  scrambleScores: Scores;
+  scrambleTotals: Record<string, string>;
   teamsByDay: Record<ScrambleDay, Team[]>;
   postings: Partial<Record<RoundKey, RoundPosting>>;
 }) {
@@ -109,10 +106,10 @@ function PlayerLedger({ player, scope, skinRounds, scrambleRounds, skinScores, s
       })}
       {scrambleRounds.map((round) => {
         const team = teamsByDay[round.day].find((entry) => entry.playerIds.includes(player.id));
-        const card = team ? scrambleScores[cardKey(round.day, team.id)] : undefined;
+        const teamScore = team ? Number(scrambleTotals[cardKey(round.day, team.id)]) || 0 : 0;
         const payout = team ? round.payouts.find((entry) => entry.teamId === team.id) : undefined;
         const share = payout && team ? payout.teamPayout / Math.max(team.playerIds.length, 1) : 0;
-        return <PlayerRoundCard key={`scramble-${round.day}`} title={`${capitalize(round.day)} · Scramble`} status={postings[`scramble-${round.day}`]?.status} total={sumScores(card)} detail={`${team?.name ?? "No team"} · ${payout ? `${ordinal(payout.place)} place · ${formatMoney(share)} share` : "$0 share"}`} scores={card} />;
+        return <PlayerRoundCard key={`scramble-${round.day}`} title={`${capitalize(round.day)} · Scramble`} status={postings[`scramble-${round.day}`]?.status} total={teamScore} detail={`${team?.name ?? "No team"} · ${payout ? `${ordinal(payout.place)} place · ${formatMoney(share)} share` : "$0 share"}`} />;
       })}
     </div>
     <p className="player-ledger-note">{scope === "total" ? "Five-round tournament record" : `${capitalize(scope)} record`} · select another player above to inspect their cards.</p>
@@ -120,7 +117,7 @@ function PlayerLedger({ player, scope, skinRounds, scrambleRounds, skinScores, s
 }
 
 function PlayerRoundCard({ title, status, total, detail, scores }: { title: string; status?: RoundPosting["status"]; total: number; detail: string; scores?: HoleScore[] }) {
-  return <article className="player-round-card"><div><p>{title}</p><span>{status === "posted" ? "Posted" : "Draft"}</span></div><strong>{total || "—"}</strong><small>{detail}</small><div className="player-card-holes">{Array.from({ length: 18 }, (_, index) => <span key={index}>{scores?.find((score) => score.holeNumber === index + 1)?.strokes ?? "—"}</span>)}</div></article>;
+  return <article className="player-round-card"><div><p>{title}</p><span>{status === "posted" ? "Posted" : "Draft"}</span></div><strong>{total || "—"}</strong><small>{detail}</small>{scores ? <div className="player-card-holes">{Array.from({ length: 18 }, (_, index) => <span key={index}>{scores.find((score) => score.holeNumber === index + 1)?.strokes ?? "—"}</span>)}</div> : null}</article>;
 }
 
 function PayoutStat({ label, value }: { label: string; value: string }) { return <div className="club-stat p-3"><p>{label}</p><strong className="mt-2 block text-lg text-[#f1dfb3]">{value}</strong></div>; }

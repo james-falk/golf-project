@@ -1247,3 +1247,37 @@ body:has(.journey-shell) .lore-button { display: none; }
   .journey-clouds, .journey-enter i, .journey-scroll-cue span, .journey-scroll-cue i, .journey-fast-pass, .journey-music i, .club-music span { animation: none; }
   .journey-nav { display: none; }
 }
+
+/* Scramble: six team cards top to bottom, one score each. */
+.scramble-team-list { display: grid; gap: 0.85rem; }
+.scramble-team-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem 1.5rem; border: 4px double rgba(214,186,115,0.55); background: linear-gradient(145deg, #143e34, #0d2e27); padding: clamp(1rem, 3vw, 1.5rem); }
+.scramble-team-head { display: flex; align-items: baseline; gap: 0.75rem; grid-column: 1 / -1; }
+.scramble-team-head h3 { color: #f1e6ce; font-family: var(--font-club-display), Georgia, serif; font-size: 1.5rem; font-weight: 700; }
+.scramble-team-rank { display: grid; min-width: 2rem; height: 2rem; place-items: center; border: 1px solid #bca062; color: #ead292; font-size: 0.9rem; font-weight: 700; }
+.scramble-team-payout { margin-left: auto; color: #ead292; font-size: 0.85rem; font-weight: 700; }
+.scramble-team-players { display: flex; flex-wrap: wrap; gap: 0.35rem 1.35rem; align-self: center; margin: 0; padding: 0; list-style: none; }
+.scramble-team-players li { color: #f1e6ce; font-family: var(--font-club-display), Georgia, serif; font-size: 1.45rem; font-weight: 600; }
+.scramble-team-score { display: flex; align-items: center; gap: 1rem; justify-self: end; }
+.scramble-team-score label { display: flex; flex-direction: column; gap: 0.3rem; }
+.scramble-team-score label > span { color: #d3ba7a; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.scramble-team-score input { width: 5.5rem; min-height: 3.2rem; border: 1px solid #8e7c55; background: #f7f0df; color: #12332d; font-family: var(--font-club-display), Georgia, serif; font-size: 2rem; font-weight: 700; text-align: center; outline: none; }
+.scramble-team-score > strong { color: #f1e6ce; font-family: var(--font-club-display), Georgia, serif; font-size: 2.4rem; }
+.scramble-team-topar { min-width: 3.5rem; color: #c5b48f; font-size: 1.25rem; font-weight: 700; text-align: right; }
+.scramble-team-topar.is-under { color: #8fd6a8; }
+@media (max-width: 640px) {
+  .scramble-team-card { grid-template-columns: minmax(0, 1fr); }
+  .scramble-team-score { justify-self: start; }
+}
+
+/* Archive: pick a year, open that board. */
+.archive-year-list { display: grid; gap: 0.75rem; }
+.archive-year { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 4px double rgba(214,186,115,0.55); background: linear-gradient(145deg, #143e34, #0d2e27); padding: clamp(1.1rem, 3vw, 1.75rem); }
+.archive-year:hover { background: linear-gradient(145deg, #18493d, #10352d); }
+.archive-year-number { color: #f1e6ce; font-family: var(--font-club-display), Georgia, serif; font-size: 2.75rem; font-weight: 700; }
+.archive-year-detail { color: #d3ba7a; font-size: 0.9rem; font-weight: 700; }
+
+/* Gallery additions: club archive tiles, removal and upload errors. */
+.gallery-grid .gallery-lore img { object-fit: contain; padding: 1.25rem 1.25rem 4.5rem; }
+.gallery-remove, .gallery-open-file { position: absolute; z-index: 3; top: 0.75rem; right: 0.75rem; border: 1px solid #d6ba73; background: rgba(7,27,24,0.82); color: #ead292; padding: 0.35rem 0.7rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+.gallery-remove:hover, .gallery-open-file:hover { background: #e5d0a0; color: #173f35; }
+.gallery-upload-error { grid-column: 1 / -1; margin-top: 0.9rem; border: 1px solid #e2917f; background: rgba(120,38,26,0.35); color: #f6d3ca; padding: 0.7rem 0.9rem; font-size: 0.85rem; }

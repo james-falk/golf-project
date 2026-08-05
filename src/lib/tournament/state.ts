@@ -20,4 +20,10 @@ export type TournamentState = {
   scrambleScores: Scores;
   scrambleOfficialTotals: Record<string, string>;
   postings: Partial<Record<RoundKey, RoundPosting>>;
+  /**
+   * Set once, when the commissioner starts the tournament for real. While it is
+   * present the stored ledger is authoritative: nothing reseeds it, and the site
+   * cannot change the roster or the teams. Clearing it is a backend-only action.
+   */
+  lockedAt?: string;
 };

@@ -43,6 +43,14 @@ function validateCard(scores: number[]) {
   scores.forEach(validateStrokes);
 }
 
+/** A posted round is on the public board, so it must be reopened before anything in it changes. */
+function validateRoundOpen(state: TournamentState, day: string, round: "skins" | "scramble") {
+  const key = `${round}-${day}` as keyof TournamentState["postings"];
+  if (state.postings?.[key]?.status === "posted") {
+    throw new Error(`${day} ${round} is posted and must be returned to review before its scores can change`);
+  }
+}
+
 function replaceHole(card: TournamentState["skinScores"][string] | undefined, hole: number, strokes: number) {
   return [...(card ?? []).filter((score) => score.holeNumber !== hole), { holeNumber: hole, strokes }].sort((a, b) => a.holeNumber - b.holeNumber);
 }
@@ -54,6 +62,7 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
   const state = structuredClone(current);
 
   if (command.type === "player-card") {
+    validateRoundOpen(state, command.day, "skins");
     validateCard(command.scores);
     const player = resolveNamed(state.players, command.player, "Player");
     state.skinScores[`${command.day}:${player.id}`] = command.scores.map((strokes, index) => ({ holeNumber: index + 1, strokes }));
@@ -62,6 +71,7 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
   }
 
   if (command.type === "player-hole") {
+    validateRoundOpen(state, command.day, "skins");
     validateHole(command.hole);
     validateStrokes(command.strokes);
     const player = resolveNamed(state.players, command.player, "Player");
@@ -72,6 +82,7 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
   }
 
   if (command.type === "ctp") {
+    validateRoundOpen(state, command.day, "skins");
     validateHole(command.hole);
     const player = resolveNamed(state.players, command.player, "Player");
     state.closestToPin[`${command.day}:${command.hole}`] = player.id;
@@ -79,6 +90,7 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
   }
 
   if (command.type === "scramble-card") {
+    validateRoundOpen(state, command.day, "scramble");
     validateCard(command.scores);
     const team = resolveNamed(state.teamsByDay[command.day], command.team, "Team");
     state.scrambleScores[`${command.day}:${team.id}`] = command.scores.map((strokes, index) => ({ holeNumber: index + 1, strokes }));
@@ -87,6 +99,7 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
   }
 
   if (command.type === "scramble-hole") {
+    validateRoundOpen(state, command.day, "scramble");
     validateHole(command.hole);
     validateStrokes(command.strokes);
     const team = resolveNamed(state.teamsByDay[command.day], command.team, "Team");

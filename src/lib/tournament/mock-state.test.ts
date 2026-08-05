@@ -15,6 +15,13 @@ describe("2026 five-round mock tournament", () => {
     expect(startingRoster).toHaveLength(23);
     expect(startingRoster.some((player) => player.name === "Tate")).toBe(false);
     expect(state.players).toHaveLength(23);
+    expect((["A", "B", "C", "D"] as const).map((tier) => startingRoster.filter((player) => player.tier === tier).length)).toEqual([6, 6, 6, 5]);
+    expect(startingRoster.find((player) => player.name === "Matt")?.tier).toBe("C");
+  });
+
+  it("keys every player by a unique id so scores are never reassigned", () => {
+    expect(new Set(startingRoster.map((player) => player.id)).size).toBe(startingRoster.length);
+    expect(new Set(startingRoster.map((player) => player.name)).size).toBe(startingRoster.length);
     expect(state.teamsByDay.friday.map((team) => team.playerIds.length)).toEqual([4, 4, 4, 4, 4, 3]);
     expect(state.teamsByDay.saturday.map((team) => team.playerIds.length)).toEqual([4, 4, 4, 4, 4, 3]);
     for (const day of ["friday", "saturday"] as const) {

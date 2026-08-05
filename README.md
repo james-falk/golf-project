@@ -48,9 +48,39 @@ The production Vercel project is connected to the `main` branch of
 Pushing a verified commit to `main` deploys it to
 [`eastcoastbigplayas.com`](https://eastcoastbigplayas.com).
 
-The preview saves score entry in browser local storage under
-`ecbp-2026-scorekeeper-draft-v4`. That is suitable for workflow testing on one browser only;
-it is not the production source of truth and cannot be shared with Telegram.
+A browser draft is kept under `ecbp-2026-scorekeeper-draft-v5`, but it is only
+used when there is no shared database at all. Once Postgres answers, the stored
+ledger is the single source of truth and a stale local draft can never be
+replayed over it.
+
+## Tournament lifecycle
+
+The board has two states, and the move between them is one-way from the site.
+
+**Not started.** Everything is disposable. Commissioner setup can rearrange the
+roster and both days of teams, and `Load preview data for testing` fills the
+board with throwaway scores so the whole workflow can be rehearsed.
+
+**Started and locked.** `Start the tournament & lock the field` clears every
+score, keeps the confirmed 23-player roster and the teams as arranged, and marks
+the ledger locked. From that moment:
+
+- nothing reseeds or regenerates the board — a page load only ever reads
+- the site cannot change the roster or the teams, and ignores any attempt to
+- a posted round refuses further scores, from the site and from Telegram alike,
+  until the commissioner returns it to review
+- score entry is otherwise unchanged
+
+Changing a locked tournament is deliberately a backend-only action:
+
+```bash
+npx vercel env pull .env.local
+npm run tournament:admin status
+```
+
+`tournament:admin` can move a stroke band, correct a name, reopen a posted
+round, and unlock or re-lock the tournament. Every write prints the change first
+and does nothing without `--yes`.
 
 ## Production direction
 
