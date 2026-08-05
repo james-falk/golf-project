@@ -1,0 +1,80 @@
+import { describe, expect, it } from "vitest";
+import { confirmed2026Rules } from "./config";
+import { calculateScramblePayouts, calculateSkinPayouts, calculateSkins, skinRoundPot, strokesReceivedOnHole } from "./rules";
+import type { Course, Player } from "./types";
+
+const players: Player[] = [
+  { id: "a", name: "A Player", tier: "A" },
+  { id: "b", name: "B Player", tier: "B" },
+  { id: "c", name: "C Player", tier: "C" },
+];
+const course: Course = { id: "test", name: "Test", holes: [{ number: 1, par: 4, strokeIndex: 1 }, { number: 2, par: 4, strokeIndex: 8 }] };
+
+describe("2026 confirmed tournament rules", () => {
+  it("allocates B strokes to the six hardest Tribute holes", () => {
+    expect(strokesReceivedOnHole("B", 1, confirmed2026Rules.skinRound)).toBe(1);
+    expect(strokesReceivedOnHole("B", 6, confirmed2026Rules.skinRound)).toBe(1);
+    expect(strokesReceivedOnHole("B", 7, confirmed2026Rules.skinRound)).toBe(0);
+    expect(strokesReceivedOnHole("D", 18, confirmed2026Rules.skinRound)).toBe(1);
+  });
+
+  it("gives a D-tier player one stroke on every hole", () => {
+    for (let strokeIndex = 1; strokeIndex <= 18; strokeIndex += 1) {
+      expect(strokesReceivedOnHole("D", strokeIndex, confirmed2026Rules.skinRound)).toBe(1);
+    }
+  });
+
+  it("kills a tied low-net skin instead of carrying or splitting it", () => {
+    const skins = calculateSkins(players, course, {
+      a: [{ holeNumber: 1, strokes: 4 }],
+      b: [{ holeNumber: 1, strokes: 5 }], // net 4 after a B stroke
+      c: [{ holeNumber: 1, strokes: 7 }],
+    }, confirmed2026Rules.skinRound);
+    expect(skins[0]).toMatchObject({ holeNumber: 1, isTie: true, isComplete: true });
+    expect(skins[0].winnerId).toBeUndefined();
+  });
+
+  it("does not decide a skin until every active player has entered that hole", () => {
+    const incomplete = calculateSkins(players, course, {
+      a: [{ holeNumber: 1, strokes: 4 }],
+      b: [{ holeNumber: 1, strokes: 6 }],
+    }, confirmed2026Rules.skinRound);
+    expect(incomplete[0]).toMatchObject({ holeNumber: 1, isComplete: false });
+    expect(incomplete[0].winnerId).toBeUndefined();
+
+    const skins = calculateSkins(players, course, {
+      a: [{ holeNumber: 1, strokes: 4 }],
+      b: [{ holeNumber: 1, strokes: 6 }],
+      c: [{ holeNumber: 1, strokes: 7 }],
+    }, confirmed2026Rules.skinRound);
+    expect(skins[0]).toMatchObject({ holeNumber: 1, winnerId: "a", isComplete: true, isTie: false });
+  });
+
+  it("uses the legacy $20 per player money map", () => {
+    expect(skinRoundPot(18, confirmed2026Rules.skinRound)).toEqual({ total: 360, closestToPinTotal: 80, skinsTotal: 280 });
+    expect(skinRoundPot(23, confirmed2026Rules.skinRound)).toEqual({ total: 460, closestToPinTotal: 80, skinsTotal: 380 });
+    const skins = [{ holeNumber: 1, winnerId: "a", isTie: false, isComplete: true }, { holeNumber: 2, winnerId: "b", isTie: false, isComplete: true }, { holeNumber: 3, winnerId: "c", isTie: false, isComplete: true }];
+    expect(calculateSkinPayouts(18, skins, confirmed2026Rules.skinRound)).toEqual({ 1: 94, 2: 93, 3: 93 });
+    expect(Object.values(calculateSkinPayouts(23, skins, confirmed2026Rules.skinRound)).reduce((sum, payout) => sum + payout, 0)).toBe(380);
+  });
+
+  it("splits a first-place scramble tie across the full pot and removes second", () => {
+    expect(calculateScramblePayouts([{ teamId: "one", total: 65 }, { teamId: "two", total: 65 }, { teamId: "three", total: 68 }], 18, confirmed2026Rules.scrambleRound))
+      .toEqual([{ teamId: "one", place: 1, teamPayout: 180 }, { teamId: "two", place: 1, teamPayout: 180 }]);
+  });
+
+  it("uses the 23-player legacy scramble split of $380 first and $80 second", () => {
+    expect(calculateScramblePayouts([{ teamId: "one", total: 64 }, { teamId: "two", total: 65 }, { teamId: "three", total: 67 }], 23, confirmed2026Rules.scrambleRound))
+      .toEqual([{ teamId: "one", place: 1, teamPayout: 380 }, { teamId: "two", place: 2, teamPayout: 80 }]);
+  });
+
+  it("splits a 23-player first-place tie across the full $460 pot", () => {
+    expect(calculateScramblePayouts([{ teamId: "one", total: 65 }, { teamId: "two", total: 65 }, { teamId: "three", total: 68 }], 23, confirmed2026Rules.scrambleRound))
+      .toEqual([{ teamId: "one", place: 1, teamPayout: 230 }, { teamId: "two", place: 1, teamPayout: 230 }]);
+  });
+
+  it("splits only the second-place share when second is tied", () => {
+    expect(calculateScramblePayouts([{ teamId: "one", total: 64 }, { teamId: "two", total: 65 }, { teamId: "three", total: 65 }], 18, confirmed2026Rules.scrambleRound))
+      .toEqual([{ teamId: "one", place: 1, teamPayout: 280 }, { teamId: "two", place: 2, teamPayout: 40 }, { teamId: "three", place: 2, teamPayout: 40 }]);
+  });
+});

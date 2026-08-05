@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# East Coast Big Playas — Tournament Central 2026
 
-## Getting Started
+Local preview and rules engine for the 2026 tournament.
 
-First, run the development server:
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the `Local` URL printed by Next.js. It uses port 3000 when available and
+automatically chooses another port when it is not.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Local development passcodes:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Viewer: `duckblind`
+- Commissioner/scorekeeper: `commissioner`
 
-## Learn More
+The active experience is the designed clubhouse site: access gate, lodge
+homepage, five-round scoring hub, commissioner entry surfaces, and the gallery
+preview. The retired scrolling-story video is not part of the active app.
 
-To learn more about Next.js, take a look at the following resources:
+## Generate Jeff's reaction audio
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Add `ELEVENLABS_API_KEY` to `.env.local`, then run:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run audio:jeff
+```
 
-## Deploy on Vercel
+This generates `public/audio/jeff-poke.mp3` once. The browser plays that local
+file on every poke; the ElevenLabs key is never shipped to the client. Set the
+optional `ELEVENLABS_VOICE_ID` to replace the prototype voice.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Verify before changing scoring
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+The preview saves score entry in browser local storage under
+`ecbp-2026-scorekeeper-draft-v4`. That is suitable for workflow testing on one browser only;
+it is not the production source of truth and cannot be shared with Telegram.
+
+## Production direction
+
+- `db/schema.sql` is the starting Postgres model.
+- `docs/PRODUCTION-SETUP.md` describes the intended access roles.
+- `docs/HERMES-SCORING-AGENT.md` defines the Telegram/Hermes scoring boundary
+  and commissioner override requirements.

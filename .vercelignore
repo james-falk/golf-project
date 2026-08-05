@@ -1,0 +1,7 @@
+.env*
+!.env.example
+.artifacts
+.next
+node_modules
+output
+tmp
