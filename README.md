@@ -41,6 +41,13 @@ npm run lint
 npm run build
 ```
 
+## Deployment
+
+The production Vercel project is connected to the `main` branch of
+[`james-falk/golf-project`](https://github.com/james-falk/golf-project).
+Pushing a verified commit to `main` deploys it to
+[`eastcoastbigplayas.com`](https://eastcoastbigplayas.com).
+
 The preview saves score entry in browser local storage under
 `ecbp-2026-scorekeeper-draft-v4`. That is suitable for workflow testing on one browser only;
 it is not the production source of truth and cannot be shared with Telegram.
