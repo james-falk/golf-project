@@ -27,15 +27,20 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+const isArchiveMode = process.env.NEXT_PUBLIC_ARCHIVE_MODE === 'true';
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // The archive is a finished, read-only record. There is nothing here to
+  // protect and nothing to edit, so it opens straight to the board rather than
+  // asking for a code.
+  const [isAuthenticated, setIsAuthenticated] = useState(isArchiveMode);
+  const [userRole, setUserRole] = useState<UserRole | null>(isArchiveMode ? 'viewer' : null);
+  const [isLoading, setIsLoading] = useState(!isArchiveMode);
   const [preloadedData, setPreloadedData] = useState<unknown>(null);
-  const isArchiveMode = process.env.NEXT_PUBLIC_ARCHIVE_MODE === 'true';
 
   // Check for existing session on mount
   useEffect(() => {
+    if (isArchiveMode) return;
     const checkAuth = () => {
       const savedRole = localStorage.getItem('golf-user-role') as UserRole | null;
       const sessionExpiry = localStorage.getItem('golf-session-expiry');
@@ -73,6 +78,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // There is no signing out of a public archive.
+    if (isArchiveMode) return;
     setIsAuthenticated(false);
     setUserRole(null);
     setPreloadedData(null);
