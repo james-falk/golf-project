@@ -99,7 +99,19 @@ describe("2026 five-round mock tournament", () => {
       return { teams, payouts: calculateScramblePayouts(results, state.players.length, confirmed2026Rules.scrambleRound) };
     });
     const payouts = calculatePlayerPayoutBreakdowns(state.players, skinRounds, scrambleRounds, confirmed2026Rules.skinRound.closestToPinPrize);
-    expect(payouts.reduce((sum, player) => sum + player.total, 0)).toBe(2300);
+    const distributed = payouts.reduce((sum, player) => sum + player.total, 0);
+
+    // Team shares round down, exactly as the 2025 board did, so a team whose
+    // payout does not divide evenly leaves a few dollars unallocated. The gap
+    // must be only that rounding and nothing else.
+    const roundingLoss = scrambleRounds.reduce((loss, round) => loss + round.payouts.reduce((roundLoss, payout) => {
+      const size = round.teams.find((team) => team.id === payout.teamId)!.playerIds.length;
+      return roundLoss + (payout.teamPayout - Math.floor(payout.teamPayout / size) * size);
+    }, 0), 0);
+
+    expect(distributed).toBe(2300 - roundingLoss);
+    expect(roundingLoss).toBeLessThan(state.players.length);
+    skinRounds.forEach((round) => expect(Object.values(round.payoutByHole).reduce((sum, payout) => sum + payout, 0) + round.closestToPinWinnerIds.length * 20).toBe(460));
     skinRounds.forEach((round) => expect(Object.values(round.payoutByHole).reduce((sum, payout) => sum + payout, 0) + round.closestToPinWinnerIds.length * 20).toBe(460));
     scrambleRounds.forEach((round) => expect(round.payouts.reduce((sum, payout) => sum + payout.teamPayout, 0)).toBe(460));
   });

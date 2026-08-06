@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrandLogo } from "@/components/BrandLogo";
-import { ClubHome, GalleryPage } from "@/components/ClubHome";
+import { ClubHome } from "@/components/ClubHome";
 import { ClubPet } from "@/components/ClubPet";
 import { PayoutDashboard } from "@/components/PayoutDashboard";
 import type { AccessRole } from "@/lib/access";
@@ -14,7 +14,7 @@ import { classicCourse, makeTeams, startingRoster, tributeCourse } from "@/lib/t
 import type { RoundKey, RoundPosting, Scores, ScrambleDay, SkinDay, Team, TournamentState } from "@/lib/tournament/state";
 import type { HoleScore, Player } from "@/lib/tournament/types";
 
-type Tab = "home" | "central" | "gallery" | "skins" | "scramble" | "setup" | "archive";
+type Tab = "home" | "central" | "skins" | "scramble" | "setup" | "archive";
 type ScoreDay = SkinDay | "payouts";
 type RoundType = "skins" | "scramble";
 
@@ -26,7 +26,6 @@ const musicVolume = 0.09;
 const tabs: Array<{ id: Tab; label: string; mobileLabel: string }> = [
   { id: "home", label: "Clubhouse", mobileLabel: "Home" },
   { id: "central", label: "Scoring", mobileLabel: "Scores" },
-  { id: "gallery", label: "Gallery", mobileLabel: "Photos" },
   { id: "setup", label: "Commissioner setup", mobileLabel: "Setup" },
   { id: "archive", label: "Archive", mobileLabel: "Archive" },
 ];
@@ -328,7 +327,7 @@ export function TournamentConsole() {
           </nav>
         </div>
       </header>
-      {tab === "home" ? <ClubHome onOpenScoring={() => switchTab("central")} onOpenGallery={() => switchTab("gallery")} /> : <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
+      {tab === "home" ? <ClubHome onOpenScoring={() => switchTab("central")} /> : <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
         {tab === "central" && <Central
           players={players}
           activeScoreDay={activeScoreDay}
@@ -353,7 +352,6 @@ export function TournamentConsole() {
           openSkins={() => switchTab("skins")}
           openScramble={() => switchTab("scramble")}
         />}
-        {tab === "gallery" && <GalleryPage canEdit={canEdit} />}
         {tab === "skins" && (canEdit || skinIsPosted ? <SkinsBoard canEdit={canEdit} activeDay={activeSkinDay} backToDay={() => switchTab("central")} players={players} scores={skinScores} updateScore={updateSkinScore} closestToPin={closestToPin} setClosestToPin={setClosestToPin} posting={postings[activeSkinRoundKey]} canPublish={skinCardsReady && skinCtpReady} publish={() => publishRound(activeSkinRoundKey)} returnToReview={() => returnRoundToReview(activeSkinRoundKey)} /> : <AwaitingBoard course="Skins" day={activeSkinDay} days={skinDays} onDayChange={setActiveSkinDay} />)}
         {tab === "scramble" && (canEdit || scrambleIsPosted ? <ScrambleBoard canEdit={canEdit} activeDay={activeScrambleDay} backToDay={() => switchTab("central")} teams={teams} players={players} officialTotals={scrambleOfficialTotals} setOfficialTotals={setScrambleOfficialTotals} payouts={scramblePayouts} posting={postings[activeScrambleRoundKey]} canPublish={scrambleCardsReady} publish={() => publishRound(activeScrambleRoundKey)} returnToReview={() => returnRoundToReview(activeScrambleRoundKey)} /> : <AwaitingBoard course="Scramble" day={activeScrambleDay} days={scrambleDays} onDayChange={setActiveScrambleDay} />)}
         {tab === "setup" && canEdit && <Setup activeDay={activeScrambleDay} setActiveDay={setActiveScrambleDay} players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} resetAllTeams={() => setTeamsByDay({ friday: makeTeams(startingRoster), saturday: makeTeams(startingRoster) })} locked={locked} lifecycleBusy={lifecycleBusy} runLifecycleAction={runLifecycleAction} />}
