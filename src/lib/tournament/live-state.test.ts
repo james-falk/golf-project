@@ -148,3 +148,94 @@ describe("Hermes writes against a posted round", () => {
     expect(isTournamentLocked(result.state)).toBe(true);
   });
 });
+
+describe("naming a scramble team after the field is locked", () => {
+  const lockedBoard = () => {
+    const state = makeCleanTournamentState(null, lockedAt);
+    state.teamsByDay.friday[0] = { ...state.teamsByDay.friday[0], name: "Team 1" };
+    return state;
+  };
+
+  it("accepts a new team name but keeps the locked line-up", () => {
+    const current = lockedBoard();
+    const originalLineUp = current.teamsByDay.friday[0].playerIds;
+    const incoming: TournamentState = {
+      ...current,
+      teamsByDay: {
+        ...current.teamsByDay,
+        friday: current.teamsByDay.friday.map((team, index) =>
+          index === 0 ? { ...team, name: "The Hydration Marshals", playerIds: ["player-1"] } : team),
+      },
+    };
+    const { merged } = mergeSiteSave(current, incoming);
+    expect(merged.teamsByDay.friday[0].name).toBe("The Hydration Marshals");
+    expect(merged.teamsByDay.friday[0].playerIds).toEqual(originalLineUp);
+  });
+
+  it("will not let a renamed team smuggle in an extra team or drop one", () => {
+    const current = lockedBoard();
+    const incoming: TournamentState = {
+      ...current,
+      teamsByDay: {
+        ...current.teamsByDay,
+        friday: [{ id: "team-99", name: "Ringers", playerIds: ["player-1", "player-2"] }],
+      },
+    };
+    const { merged } = mergeSiteSave(current, incoming);
+    expect(merged.teamsByDay.friday).toHaveLength(current.teamsByDay.friday.length);
+    expect(merged.teamsByDay.friday.some((team) => team.id === "team-99")).toBe(false);
+  });
+
+  it("falls back to the stored name when the browser sends a blank one", () => {
+    const current = lockedBoard();
+    const incoming: TournamentState = {
+      ...current,
+      teamsByDay: {
+        ...current.teamsByDay,
+        friday: current.teamsByDay.friday.map((team, index) => index === 0 ? { ...team, name: "   " } : team),
+      },
+    };
+    const { merged } = mergeSiteSave(current, incoming);
+    expect(merged.teamsByDay.friday[0].name).toBe("Team 1");
+  });
+
+  it("still refuses a line-up change on an unnamed save", () => {
+    const current = lockedBoard();
+    const incoming: TournamentState = {
+      ...current,
+      teamsByDay: {
+        ...current.teamsByDay,
+        friday: current.teamsByDay.friday.map((team, index) =>
+          index === 0 ? { ...team, playerIds: [...team.playerIds].reverse() } : team),
+      },
+    };
+    const { merged } = mergeSiteSave(current, incoming);
+    expect(merged.teamsByDay.friday[0].playerIds).toEqual(current.teamsByDay.friday[0].playerIds);
+  });
+});
+
+describe("finding a renamed team from Telegram", () => {
+  const renamedBoard = () => {
+    const state = makeCleanTournamentState(null, lockedAt);
+    state.teamsByDay.friday = state.teamsByDay.friday.map((team, index) =>
+      index === 2 ? { ...team, name: "Swamp Division" } : team);
+    return state;
+  };
+  const scores = Array.from({ length: 18 }, () => 4);
+
+  it("accepts the new name", () => {
+    const result = applyHermesScoringCommand(renamedBoard(), { type: "scramble-card", day: "friday", team: "Swamp Division", scores });
+    expect(result.state.scrambleScores["friday:team-3"]).toHaveLength(18);
+  });
+
+  it("still accepts the position it has always had", () => {
+    for (const alias of ["Team 3", "team3", "team-3"]) {
+      const result = applyHermesScoringCommand(renamedBoard(), { type: "scramble-card", day: "friday", team: alias, scores });
+      expect(result.state.scrambleScores["friday:team-3"]).toHaveLength(18);
+    }
+  });
+
+  it("still refuses a team that does not exist", () => {
+    expect(() => applyHermesScoringCommand(renamedBoard(), { type: "scramble-card", day: "friday", team: "Team 9", scores })).toThrow(/Unknown team/);
+  });
+});

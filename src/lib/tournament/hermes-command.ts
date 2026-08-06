@@ -30,6 +30,24 @@ function resolveNamed<T extends { name: string }>(entries: T[], query: string, k
   throw new Error(`Ambiguous ${kind.toLowerCase()} “${query}”: ${matches.map((entry) => entry.name).join(", ")}`);
 }
 
+/**
+ * Teams can be renamed at any point, so a Telegram message may use the new name
+ * or the position it has always had. "Team 3", "team3" and "team-3" all resolve
+ * to the third team even after it becomes something else.
+ */
+function resolveTeam<T extends { id: string; name: string }>(teams: T[], query: string) {
+  const needle = normalize(query);
+  if (!needle) throw new Error("Team is required");
+  const byPosition = needle.match(/^team\s*(\d+)$/);
+  if (byPosition) {
+    const team = teams.find((entry) => entry.id === `team-${byPosition[1]}`);
+    if (team) return team;
+  }
+  const byId = teams.find((entry) => normalize(entry.id) === needle);
+  if (byId) return byId;
+  return resolveNamed(teams, query, "Team");
+}
+
 function validateHole(hole: number) {
   if (!Number.isInteger(hole) || hole < 1 || hole > 18) throw new Error("Hole must be an integer from 1 through 18");
 }
@@ -92,7 +110,7 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
   if (command.type === "scramble-card") {
     validateRoundOpen(state, command.day, "scramble");
     validateCard(command.scores);
-    const team = resolveNamed(state.teamsByDay[command.day], command.team, "Team");
+    const team = resolveTeam(state.teamsByDay[command.day], command.team);
     state.scrambleScores[`${command.day}:${team.id}`] = command.scores.map((strokes, index) => ({ holeNumber: index + 1, strokes }));
     const cardTotal = total(command.scores);
     return { state, total: cardTotal, summary: `${command.day} scramble: saved ${team.name}'s 18-hole card (${cardTotal})` };
@@ -102,7 +120,7 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
     validateRoundOpen(state, command.day, "scramble");
     validateHole(command.hole);
     validateStrokes(command.strokes);
-    const team = resolveNamed(state.teamsByDay[command.day], command.team, "Team");
+    const team = resolveTeam(state.teamsByDay[command.day], command.team);
     const key = `${command.day}:${team.id}`;
     state.scrambleScores[key] = replaceHole(state.scrambleScores[key], command.hole, command.strokes);
     const cardTotal = total(cardScores(state.scrambleScores[key]));

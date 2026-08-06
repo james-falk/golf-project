@@ -79,16 +79,40 @@ export function changedRoundKeys(before: Partial<TournamentState>, after: Partia
   return [...changed];
 }
 
+const cleanTeamName = (value: unknown, fallback: string) =>
+  (typeof value === "string" ? value.trim().slice(0, 40) : "") || fallback;
+
+/**
+ * A locked tournament keeps the teams the server already has, except for their
+ * names. Who is on a team decides the scramble payout and stays frozen; what a
+ * team calls itself is decoration and can be changed any time.
+ */
+export function lockedTeams(
+  current: TournamentState["teamsByDay"] | undefined,
+  incoming: TournamentState["teamsByDay"] | undefined,
+): TournamentState["teamsByDay"] {
+  const days = ["friday", "saturday"] as const;
+  const merged = {} as TournamentState["teamsByDay"];
+  days.forEach((day) => {
+    const serverTeams = current?.[day] ?? incoming?.[day] ?? [];
+    merged[day] = serverTeams.map((team) => {
+      const renamed = incoming?.[day]?.find((entry) => entry.id === team.id);
+      return { ...team, name: cleanTeamName(renamed?.name, team.name) };
+    });
+  });
+  return merged;
+}
+
 /**
  * Merges a site save onto the stored ledger. Once the tournament is locked the
- * roster and the teams come from the server no matter what the browser sent, and
- * scores for an already-posted round are refused.
+ * roster and the team line-ups come from the server no matter what the browser
+ * sent, and scores for an already-posted round are refused.
  */
 export function mergeSiteSave(current: Partial<TournamentState>, incoming: TournamentState) {
   const locked = isTournamentLocked(current as TournamentState);
   const merged: TournamentState = {
     players: locked ? (current.players ?? incoming.players) : incoming.players,
-    teamsByDay: locked ? (current.teamsByDay ?? incoming.teamsByDay) : incoming.teamsByDay,
+    teamsByDay: locked ? lockedTeams(current.teamsByDay, incoming.teamsByDay) : incoming.teamsByDay,
     skinScores: { ...(current.skinScores ?? {}), ...(incoming.skinScores ?? {}) },
     skinOfficialTotals: { ...(current.skinOfficialTotals ?? {}), ...(incoming.skinOfficialTotals ?? {}) },
     closestToPin: { ...(current.closestToPin ?? {}), ...(incoming.closestToPin ?? {}) },

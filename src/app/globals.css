@@ -1253,3 +1253,6 @@ body:has(.journey-shell) .lore-button { display: none; }
 .archive-year-number { color: #f1e6ce; font-family: var(--font-club-display), Georgia, serif; font-size: 2.75rem; font-weight: 700; }
 .archive-year-detail { color: #d3ba7a; font-size: 0.9rem; font-weight: 700; }
 
+.scramble-team-name { min-width: 0; flex: 1 1 12rem; border: 1px solid transparent; border-bottom-color: rgba(188,160,98,0.45); background: transparent; color: #f1e6ce; font-family: var(--font-club-display), Georgia, serif; font-size: 1.5rem; font-weight: 700; outline: none; }
+.scramble-team-name:hover { border-bottom-color: #bca062; }
+.scramble-team-name:focus { border-color: #bca062; background: rgba(0,0,0,0.25); }
