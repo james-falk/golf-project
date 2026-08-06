@@ -32,7 +32,7 @@ function isPetId(value: string | null): value is PetId {
   return pets.some((pet) => pet.id === value);
 }
 
-export function ClubPet({ quiet = false }: { quiet?: boolean }) {
+export function ClubPet() {
   const petRef = useRef<HTMLDivElement>(null);
   const performanceTimer = useRef<number | null>(null);
   const [selectedId, setSelectedId] = useState<PetId>(pets[0].id);
@@ -73,8 +73,8 @@ export function ClubPet({ quiet = false }: { quiet?: boolean }) {
     const isMobile = () => coarsePointer || window.innerWidth <= 820;
     const viewportWidth = () => window.visualViewport?.width ?? window.innerWidth;
     const viewportHeight = () => window.visualViewport?.height ?? window.innerHeight;
-    const dockX = () => isMobile() ? 12 : viewportWidth() - (quiet ? 88 : 112);
-    const dockY = () => viewportHeight() - (isMobile() ? 118 : quiet ? 178 : 238);
+    const dockX = () => isMobile() ? 12 : viewportWidth() - 112;
+    const dockY = () => viewportHeight() - (isMobile() ? 118 : 238);
     let x = Math.max(12, dockX());
     let y = Math.max(84, dockY());
     let targetX = x;
@@ -151,7 +151,7 @@ export function ClubPet({ quiet = false }: { quiet?: boolean }) {
       window.removeEventListener("resize", handleResize);
       window.visualViewport?.removeEventListener("resize", handleResize);
     };
-  }, [quiet]);
+  }, []);
 
   useEffect(() => () => {
     if (performanceTimer.current !== null) window.clearTimeout(performanceTimer.current);
@@ -175,7 +175,7 @@ export function ClubPet({ quiet = false }: { quiet?: boolean }) {
     <div
       ref={petRef}
       data-pet={selectedPet.id}
-      className={`club-pet ${quiet ? "is-quiet" : ""}`}
+      className="club-pet"
     >
       <button
         key={`${selectedPet.id}-${performanceId}`}

@@ -310,7 +310,6 @@ export function TournamentConsole() {
   const canEdit = accessRole === "scorekeeper";
   const visibleTabs = canEdit ? tabs : tabs.filter((item) => item.id !== "setup");
   const statusLabel = canEdit ? !sharedStorage ? "Scorekeeper · Local draft" : syncState === "saving" ? "Saving…" : syncState === "error" ? "Save needs attention" : "Scorekeeper · Shared" : "Refresh standings";
-  const quietPet = tab === "central" || tab === "skins" || tab === "scramble" || tab === "setup" || tab === "archive";
 
   return (
     <main className={`club-site min-h-screen text-stone-100 ${tab === "central" || tab === "skins" || tab === "scramble" ? "has-scoring-room" : ""}`}>
@@ -361,7 +360,7 @@ export function TournamentConsole() {
         {tab === "setup" && canEdit && <Setup activeDay={activeScrambleDay} setActiveDay={setActiveScrambleDay} players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} resetAllTeams={() => setTeamsByDay({ friday: makeTeams(startingRoster), saturday: makeTeams(startingRoster) })} locked={locked} lifecycleBusy={lifecycleBusy} runLifecycleAction={runLifecycleAction} />}
         {tab === "archive" && <Archive />}
       </div>}
-      <ClubPet quiet={quietPet} />
+      <ClubPet />
     </main>
   );
 }
@@ -435,12 +434,12 @@ function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, 
       <div className={`grid ${isSkins ? "grid-cols-2" : "grid-cols-3"} gap-2`}><Stat label="Status" value={isPosted ? "Posted" : "Draft"} detail="" />{!isSkins ? <Stat label="Cards" value={String(teams.length)} detail="teams" /> : null}<Stat label="Purse" value={`$${isSkins ? skinPot.total : players.length * confirmed2026Rules.scrambleRound.playerEntryFee}`} detail="" /></div>
     </section>
     {isSkins && (isPosted || canEdit) ? <HoleByHoleSkins players={players} results={skinResults} payouts={skinPayouts} /> : null}
-    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
-      <div className="club-card p-5 sm:p-6">
-        <p className="club-kicker">{isPosted ? "Official results" : canEdit ? "Live committee projection" : "Awaiting official results"}</p>
+    <section className={`grid gap-4 ${isPosted || canEdit ? "lg:grid-cols-[minmax(0,1fr)_19rem]" : ""}`}>
+      {isPosted || canEdit ? <div className="club-card p-5 sm:p-6">
+        <p className="club-kicker">{isPosted ? "Official results" : "Live committee projection"}</p>
         <h3 className="club-card-title mt-1">{isSkins ? "Skins, CTP & player cards" : "Team standings & payouts"}</h3>
-        {isSkins ? isPosted || canEdit ? <><div className="mt-4">{skinStandings.length ? skinStandings.map((entry, index) => <div key={entry.player.id} className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-3 border-b border-[#bca062]/30 py-2 text-sm"><span className="text-[#d6ba73]">{index + 1}</span><span className="font-semibold">{entry.player.name}</span><span>{entry.wins} skin{entry.wins === 1 ? "" : "s"}</span><span className="font-bold text-[#ead292]">${entry.payout}</span></div>) : <p className="mt-3 text-sm text-stone-400">Complete all player cards to calculate skins.</p>}</div><div className="mt-5"><p className="club-kicker">Closest to pin · $20 each</p>{Object.entries(closestToPin).length ? Object.entries(closestToPin).map(([hole, playerId]) => <p key={hole} className="mt-2 text-sm">Hole {hole} · <span className="font-semibold text-[#ead292]">{players.find((player) => player.id === playerId)?.name ?? "Winner pending"}</span></p>) : <p className="mt-2 text-sm text-stone-400">No CTP winners entered.</p>}</div></> : <BoardClosed /> : isPosted || canEdit ? <div className="mt-4">{[...scrambleResults].filter((entry) => entry.total > 0).sort((a, b) => a.total - b.total).map((entry, index) => { const payout = scramblePayouts.find((item) => item.teamId === entry.teamId); return <div key={entry.teamId} className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-3 border-b border-[#bca062]/30 py-2 text-sm"><span className="text-[#d6ba73]">{index + 1}</span><span className="font-semibold">{teamName(teams, entry.teamId)}</span><span>{entry.total}</span><span className="font-bold text-[#ead292]">{payout ? `$${Math.floor(payout.teamPayout)}` : "—"}</span></div>})}{!scrambleLeader ? <p className="text-sm text-stone-400">Complete all team cards to calculate places and payouts.</p> : null}</div> : <BoardClosed />}
-      </div>
+        {isSkins ? isPosted || canEdit ? <><div className="mt-4">{skinStandings.length ? skinStandings.map((entry, index) => <div key={entry.player.id} className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-3 border-b border-[#bca062]/30 py-2 text-sm"><span className="text-[#d6ba73]">{index + 1}</span><span className="font-semibold">{entry.player.name}</span><span>{entry.wins} skin{entry.wins === 1 ? "" : "s"}</span><span className="font-bold text-[#ead292]">${entry.payout}</span></div>) : <p className="mt-3 text-sm text-stone-400">Complete all player cards to calculate skins.</p>}</div><div className="mt-5"><p className="club-kicker">Closest to pin · $20 each</p>{Object.entries(closestToPin).length ? Object.entries(closestToPin).map(([hole, playerId]) => <p key={hole} className="mt-2 text-sm">Hole {hole} · <span className="font-semibold text-[#ead292]">{players.find((player) => player.id === playerId)?.name ?? "Winner pending"}</span></p>) : <p className="mt-2 text-sm text-stone-400">No CTP winners entered.</p>}</div></> : null : isPosted || canEdit ? <div className="mt-4">{[...scrambleResults].filter((entry) => entry.total > 0).sort((a, b) => a.total - b.total).map((entry, index) => { const payout = scramblePayouts.find((item) => item.teamId === entry.teamId); return <div key={entry.teamId} className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-3 border-b border-[#bca062]/30 py-2 text-sm"><span className="text-[#d6ba73]">{index + 1}</span><span className="font-semibold">{teamName(teams, entry.teamId)}</span><span>{entry.total}</span><span className="font-bold text-[#ead292]">{payout ? `$${Math.floor(payout.teamPayout)}` : "—"}</span></div>})}{!scrambleLeader ? <p className="text-sm text-stone-400">Complete all team cards to calculate places and payouts.</p> : null}</div> : null}
+      </div> : null}
       <aside className="club-ledger self-start p-5 text-[#12332d]"><p className="club-ledger-label">Round access</p><h3 className="club-card-title !text-[#173f35]">{isSkins ? "Player scorecards" : "Team scorecards"}</h3><p className="mt-3 text-sm leading-6 text-[#557269]">{roundAccessCopy}</p><button type="button" disabled={!canOpen} onClick={isSkins ? openSkins : openScramble} className="publication-primary mt-5 w-full">{canOpen ? canEdit ? `Open ${isSkins ? "player" : "team"} cards` : "View official cards" : "Awaiting posted results"}</button></aside>
     </section>
   </div>;
@@ -605,9 +604,6 @@ function AwaitingBoard<T extends string>({ course, day, days, onDayChange }: { c
   return <div className="space-y-6"><SectionTitle eyebrow={`${capitalize(day)} · ${course}`} title="No scores yet." text="" /><DayPicker days={days} activeDay={day} onChange={onDayChange} /><section className="club-hero board-awaiting p-8 text-center sm:p-12"><h3 className="club-display text-3xl sm:text-5xl">Still counting.</h3></section></div>;
 }
 
-function BoardClosed() {
-  return <div className="board-closed mt-5"><span aria-hidden="true">19</span><div><strong>No scores yet.</strong></div></div>;
-}
 
 function Setup({ activeDay, setActiveDay, players, setPlayers, teams, setTeams, resetAllTeams, locked, lifecycleBusy, runLifecycleAction }: { activeDay: ScrambleDay; setActiveDay: (day: ScrambleDay) => void; players: Player[]; setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; teams: Team[]; setTeams: React.Dispatch<React.SetStateAction<Team[]>>; resetAllTeams: () => void; locked: boolean; lifecycleBusy: boolean; runLifecycleAction: (action: "seed-preview" | "start-tournament") => void }) {
   return <div className="space-y-6"><SectionTitle eyebrow="Commissioner workspace" title="Roster, bands & teams" text={locked ? "The tournament has started. The roster and both days of teams are locked; this page is now a read-only record of the field. Score entry is unaffected." : "Arrange the field and the teams, then start the tournament to lock them in and clear the board."} />
