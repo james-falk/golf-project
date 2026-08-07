@@ -11,32 +11,32 @@ const total = (scores: Array<{ strokes: number }>) => scores.reduce((sum, score)
 describe("2026 five-round mock tournament", () => {
   const state = makeMockTournamentState();
 
-  it("uses the confirmed 23-player field with Tate removed", () => {
-    expect(startingRoster).toHaveLength(23);
+  it("uses the confirmed 22-player field, without Tate or Maxwell", () => {
+    expect(startingRoster).toHaveLength(22);
     expect(startingRoster.some((player) => player.name === "Tate")).toBe(false);
-    expect(state.players).toHaveLength(23);
-    expect((["A", "B", "C", "D"] as const).map((tier) => startingRoster.filter((player) => player.tier === tier).length)).toEqual([6, 6, 6, 5]);
+    expect(startingRoster.some((player) => player.name === "Maxwell")).toBe(false);
+    expect(state.players).toHaveLength(22);
+    expect((["A", "B", "C", "D"] as const).map((tier) => startingRoster.filter((player) => player.tier === tier).length)).toEqual([6, 6, 6, 4]);
     expect(startingRoster.find((player) => player.name === "Matt")?.tier).toBe("C");
   });
 
   it("keys every player by a unique id so scores are never reassigned", () => {
     expect(new Set(startingRoster.map((player) => player.id)).size).toBe(startingRoster.length);
     expect(new Set(startingRoster.map((player) => player.name)).size).toBe(startingRoster.length);
-    expect(state.teamsByDay.friday.map((team) => team.playerIds.length)).toEqual([4, 4, 4, 4, 4, 3]);
-    expect(state.teamsByDay.saturday.map((team) => team.playerIds.length)).toEqual([4, 4, 4, 4, 4, 3]);
+    expect(state.teamsByDay.friday.map((team) => team.playerIds.length)).toEqual([4, 4, 4, 4, 3, 3]);
+    expect(state.teamsByDay.saturday.map((team) => team.playerIds.length)).toEqual([4, 4, 4, 4, 3, 3]);
     for (const day of ["friday", "saturday"] as const) {
       const assignedPlayers = state.teamsByDay[day].flatMap((team) => team.playerIds);
-      expect(new Set(assignedPlayers).size).toBe(23);
+      expect(new Set(assignedPlayers).size).toBe(22);
       expect([...assignedPlayers].sort()).toEqual(state.players.map((player) => player.id).sort());
     }
   });
 
-  it("reconciles the $2,300 tournament and daily pots", () => {
+  it("reconciles the $2,200 tournament and daily pots at the default field size", () => {
     const round = skinRoundPot(state.players.length, confirmed2026Rules.skinRound).total;
-    expect(round).toBe(460);
-    expect(round * 5).toBe(2300);
-    expect(round).toBe(460);
-    expect(round * 2).toBe(920);
+    expect(round).toBe(440);
+    expect(round * 5).toBe(2200);
+    expect(round * 2).toBe(880);
   });
 
   it("contains complete, matching cards and all CTP winners for every skins round", () => {
@@ -66,14 +66,14 @@ describe("2026 five-round mock tournament", () => {
 
   it("exercises an outright scramble result and a first-place tie", () => {
     const fridayResults = state.teamsByDay.friday.map((team) => ({ teamId: team.id, total: total(state.scrambleScores[cardKey("friday", team.id)]) }));
-    expect(calculateScramblePayouts(fridayResults, 23, confirmed2026Rules.scrambleRound)).toEqual([
-      { teamId: "team-1", place: 1, teamPayout: 380 },
+    expect(calculateScramblePayouts(fridayResults, 22, confirmed2026Rules.scrambleRound)).toEqual([
+      { teamId: "team-1", place: 1, teamPayout: 360 },
       { teamId: "team-2", place: 2, teamPayout: 80 },
     ]);
     const saturdayResults = state.teamsByDay.saturday.map((team) => ({ teamId: team.id, total: total(state.scrambleScores[cardKey("saturday", team.id)]) }));
-    expect(calculateScramblePayouts(saturdayResults, 23, confirmed2026Rules.scrambleRound)).toEqual([
-      { teamId: "team-1", place: 1, teamPayout: 230 },
-      { teamId: "team-2", place: 1, teamPayout: 230 },
+    expect(calculateScramblePayouts(saturdayResults, 22, confirmed2026Rules.scrambleRound)).toEqual([
+      { teamId: "team-1", place: 1, teamPayout: 220 },
+      { teamId: "team-2", place: 1, teamPayout: 220 },
     ]);
   });
 
@@ -83,7 +83,7 @@ describe("2026 five-round mock tournament", () => {
     expect(classicCourse.holes).toHaveLength(18);
   });
 
-  it("reconciles all mock player payouts against the full $2,300 pool", () => {
+  it("reconciles all mock player payouts against the full $2,200 pool", () => {
     const skinRounds = (["thursday", "friday", "saturday"] as const).map((day) => {
       const scoresByPlayer = Object.fromEntries(state.players.map((player) => [player.id, state.skinScores[cardKey(day, player.id)]]));
       const results = calculateSkins(state.players, tributeCourse, scoresByPlayer, confirmed2026Rules.skinRound);
@@ -109,10 +109,9 @@ describe("2026 five-round mock tournament", () => {
       return roundLoss + (payout.teamPayout - Math.floor(payout.teamPayout / size) * size);
     }, 0), 0);
 
-    expect(distributed).toBe(2300 - roundingLoss);
+    expect(distributed).toBe(2200 - roundingLoss);
     expect(roundingLoss).toBeLessThan(state.players.length);
-    skinRounds.forEach((round) => expect(Object.values(round.payoutByHole).reduce((sum, payout) => sum + payout, 0) + round.closestToPinWinnerIds.length * 20).toBe(460));
-    skinRounds.forEach((round) => expect(Object.values(round.payoutByHole).reduce((sum, payout) => sum + payout, 0) + round.closestToPinWinnerIds.length * 20).toBe(460));
-    scrambleRounds.forEach((round) => expect(round.payouts.reduce((sum, payout) => sum + payout.teamPayout, 0)).toBe(460));
+    skinRounds.forEach((round) => expect(Object.values(round.payoutByHole).reduce((sum, payout) => sum + payout, 0) + round.closestToPinWinnerIds.length * 20).toBe(440));
+    scrambleRounds.forEach((round) => expect(round.payouts.reduce((sum, payout) => sum + payout.teamPayout, 0)).toBe(440));
   });
 });

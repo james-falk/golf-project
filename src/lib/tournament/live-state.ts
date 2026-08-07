@@ -2,6 +2,29 @@ import { makeTeams, startingRoster } from "./seed";
 import type { RoundKey, Team, TournamentState } from "./state";
 import type { Player } from "./types";
 
+/**
+ * How many $20 entries a round's pot was built from. Normally that is just the
+ * size of the field, but a player who paid and then did not play leaves his
+ * money in the pot while dropping out of the scoring, so the round carries an
+ * explicit count instead.
+ */
+export function paidEntriesForRound(
+  state: Pick<TournamentState, "paidEntries"> | null | undefined,
+  round: RoundKey,
+  fieldSize: number,
+) {
+  const paid = state?.paidEntries?.[round];
+  return typeof paid === "number" && paid > 0 ? paid : fieldSize;
+}
+
+export const allRoundKeys: RoundKey[] = [
+  "skins-thursday",
+  "skins-friday",
+  "scramble-friday",
+  "skins-saturday",
+  "scramble-saturday",
+];
+
 /** The stored ledger is authoritative from the moment the commissioner starts the tournament. */
 export function isTournamentLocked(state: Pick<TournamentState, "lockedAt"> | null | undefined) {
   return Boolean(state?.lockedAt);

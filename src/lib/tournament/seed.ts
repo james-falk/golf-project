@@ -32,7 +32,7 @@ export const startingRoster: Player[] = [
   ["player-13", "Bryce", "C"], ["player-14", "Lucas", "C"], ["player-15", "Mitchell", "C"],
   ["player-16", "Greg", "C"], ["player-17", "Cam", "C"], ["player-18", "Matt", "C"],
   ["player-19", "Pete", "D"], ["player-20", "Brandon", "D"], ["player-21", "Aiden", "D"],
-  ["player-22", "Jake", "D"], ["player-23", "Maxwell", "D"],
+  ["player-22", "Jake", "D"],
 ].map(([id, name, tier]) => ({ id, name, tier: tier as Player["tier"] }));
 
 export function makeTeams(players: Player[]) {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { applyHermesScoringCommand } from "./hermes-command";
-import { isTournamentLocked, makeCleanTournamentState, mergeSiteSave, teamsCoverRoster } from "./live-state";
+import { isTournamentLocked, makeCleanTournamentState, mergeSiteSave, paidEntriesForRound, teamsCoverRoster } from "./live-state";
+import { calculateSkinPayouts, skinRoundPot } from "./rules";
+import { confirmed2026Rules } from "./config";
 import { makeMockTournamentState } from "./mock-state";
 import { makeTeams, startingRoster } from "./seed";
 import type { TournamentState } from "./state";
@@ -16,7 +18,7 @@ describe("starting the tournament for real", () => {
   it("keeps the confirmed field and drops every score from the testing period", () => {
     const state = makeCleanTournamentState(makeMockTournamentState(), lockedAt);
     expect(state.players).toEqual(startingRoster);
-    expect(state.players).toHaveLength(23);
+    expect(state.players).toHaveLength(22);
     expect(state.skinScores).toEqual({});
     expect(state.scrambleScores).toEqual({});
     expect(state.skinOfficialTotals).toEqual({});
@@ -237,5 +239,37 @@ describe("finding a renamed team from Telegram", () => {
 
   it("still refuses a team that does not exist", () => {
     expect(() => applyHermesScoringCommand(renamedBoard(), { type: "scramble-card", day: "friday", team: "Team 9", scores })).toThrow(/Unknown team/);
+  });
+});
+
+describe("a player who paid and then did not play", () => {
+  it("prices a round from paid entries, not from the size of the field", () => {
+    const state = { paidEntries: { "skins-thursday": 23 } } as Partial<TournamentState>;
+    // Maxwell is out of the field but his $20 stays in Thursday's pot.
+    expect(paidEntriesForRound(state, "skins-thursday", 22)).toBe(23);
+    expect(skinRoundPot(paidEntriesForRound(state, "skins-thursday", 22), confirmed2026Rules.skinRound).total).toBe(460);
+    expect(skinRoundPot(paidEntriesForRound(state, "skins-thursday", 22), confirmed2026Rules.skinRound).skinsTotal).toBe(380);
+  });
+
+  it("falls back to the field for every round without an override", () => {
+    const state = { paidEntries: { "skins-thursday": 23 } } as Partial<TournamentState>;
+    expect(paidEntriesForRound(state, "skins-friday", 22)).toBe(22);
+    expect(skinRoundPot(paidEntriesForRound(state, "skins-friday", 22), confirmed2026Rules.skinRound).total).toBe(440);
+    expect(paidEntriesForRound(null, "skins-saturday", 22)).toBe(22);
+    expect(paidEntriesForRound({ paidEntries: {} }, "scramble-friday", 22)).toBe(22);
+  });
+
+  it("ignores a nonsense override rather than zeroing a pot", () => {
+    expect(paidEntriesForRound({ paidEntries: { "skins-thursday": 0 } }, "skins-thursday", 22)).toBe(22);
+    expect(paidEntriesForRound({ paidEntries: { "skins-thursday": -5 } }, "skins-thursday", 22)).toBe(22);
+  });
+
+  it("still awards every dollar of a 23-entry pot to a 22-man field", () => {
+    const entries = 23;
+    const skins = Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, isTie: false, isComplete: true, winnerId: `player-${(i % 22) + 1}`, bestNetScore: 3 }));
+    const payouts = calculateSkinPayouts(entries, skins, confirmed2026Rules.skinRound);
+    const paid = Object.values(payouts).reduce((a, b) => a + b, 0);
+    expect(paid).toBe(380);
+    expect(paid + confirmed2026Rules.skinRound.closestToPinHoleNumbers.length * confirmed2026Rules.skinRound.closestToPinPrize).toBe(460);
   });
 });

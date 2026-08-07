@@ -59,17 +59,18 @@ export function calculateSkins(
   });
 }
 
-export function skinRoundPot(activePlayerCount: number, rules: SkinRoundRules) {
-  const total = activePlayerCount * rules.playerEntryFee;
+/** The pot is built from paid entries, which is not always the same as the number of players being scored. */
+export function skinRoundPot(paidEntryCount: number, rules: SkinRoundRules) {
+  const total = paidEntryCount * rules.playerEntryFee;
   const closestToPinTotal = rules.closestToPinHoleNumbers.length * rules.closestToPinPrize;
   return { total, closestToPinTotal, skinsTotal: total - closestToPinTotal };
 }
 
 /** Splits the skins pool in whole dollars and assigns any $1 remainder by hole order. */
-export function calculateSkinPayouts(activePlayerCount: number, skins: SkinResult[], rules: SkinRoundRules) {
+export function calculateSkinPayouts(paidEntryCount: number, skins: SkinResult[], rules: SkinRoundRules) {
   const winners = skins.filter((skin) => skin.isComplete && skin.winnerId).sort((a, b) => a.holeNumber - b.holeNumber);
   if (!winners.length) return {} as Record<number, number>;
-  const pot = skinRoundPot(activePlayerCount, rules).skinsTotal;
+  const pot = skinRoundPot(paidEntryCount, rules).skinsTotal;
   const basePayout = Math.floor(pot / winners.length);
   const remainder = pot - basePayout * winners.length;
   return Object.fromEntries(winners.map((skin, index) => [skin.holeNumber, basePayout + (index < remainder ? 1 : 0)]));
@@ -80,13 +81,13 @@ export type ScramblePayout = { teamId: string; place: 1 | 2; teamPayout: number 
 /** Reproduces the legacy rule: first-place ties split all money and eliminate second. */
 export function calculateScramblePayouts(
   results: TeamResult[],
-  activePlayerCount: number,
+  paidEntryCount: number,
   rules: ScrambleRoundRules,
 ): ScramblePayout[] {
   const completed = results.filter((result) => result.total > 0).sort((a, b) => a.total - b.total);
   if (!completed.length) return [];
 
-  const pot = activePlayerCount * rules.playerEntryFee;
+  const pot = paidEntryCount * rules.playerEntryFee;
   const firstScore = completed[0].total;
   const firstPlace = completed.filter((result) => result.total === firstScore);
   if (firstPlace.length > 1) {

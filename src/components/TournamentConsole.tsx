@@ -7,7 +7,7 @@ import { ClubPet } from "@/components/ClubPet";
 import { PayoutDashboard } from "@/components/PayoutDashboard";
 import type { AccessRole } from "@/lib/access";
 import { confirmed2026Rules } from "@/lib/tournament/config";
-import { makeCleanTournamentState } from "@/lib/tournament/live-state";
+import { allRoundKeys, makeCleanTournamentState, paidEntriesForRound } from "@/lib/tournament/live-state";
 import { makeMockTournamentState } from "@/lib/tournament/mock-state";
 import { calculateScramblePayouts, calculateSkinPayouts, calculateSkins, skinRoundPot, strokesReceivedOnHole } from "@/lib/tournament/rules";
 import { classicCourse, makeTeams, startingRoster, tributeCourse } from "@/lib/tournament/seed";
@@ -47,6 +47,7 @@ export function TournamentConsole() {
   const [scrambleScores, setScrambleScores] = useState<Scores>({});
   const [scrambleOfficialTotals, setScrambleOfficialTotals] = useState<Record<string, string>>({});
   const [postings, setPostings] = useState<Partial<Record<RoundKey, RoundPosting>>>({});
+  const [paidEntries, setPaidEntries] = useState<Partial<Record<RoundKey, number>>>({});
   const [activeSkinDay, setActiveSkinDay] = useState<SkinDay>("thursday");
   const [activeScrambleDay, setActiveScrambleDay] = useState<ScrambleDay>("friday");
   const [activeScoreDay, setActiveScoreDay] = useState<ScoreDay>("thursday");
@@ -160,7 +161,7 @@ export function TournamentConsole() {
         if (saved) try { state = JSON.parse(saved) as TournamentState; } catch { /* Use the official seed. */ }
       }
       if (cancelled) return;
-      applyTournamentState(state ?? emptyTournamentState(), { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings });
+      applyTournamentState(state ?? emptyTournamentState(), { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings, setPaidEntries });
       setHydrated(true);
     };
     load();
@@ -169,7 +170,7 @@ export function TournamentConsole() {
 
   useEffect(() => {
     if (!hydrated || accessRole !== "scorekeeper") return;
-    const state = { players, skinScores, closestToPin, teamsByDay, scrambleScores, skinOfficialTotals, scrambleOfficialTotals, postings } satisfies TournamentState;
+    const state = { players, skinScores, closestToPin, teamsByDay, scrambleScores, skinOfficialTotals, scrambleOfficialTotals, postings, paidEntries } satisfies TournamentState;
     window.localStorage.setItem(scorekeeperDraftKey, JSON.stringify(state));
     if (!sharedStorage) return;
     const timeout = window.setTimeout(async () => {
@@ -181,14 +182,16 @@ export function TournamentConsole() {
       } catch { setSyncState("error"); }
     }, 650);
     return () => window.clearTimeout(timeout);
-  }, [hydrated, accessRole, sharedStorage, players, skinScores, closestToPin, teamsByDay, scrambleScores, skinOfficialTotals, scrambleOfficialTotals, postings]);
+  }, [hydrated, accessRole, sharedStorage, players, skinScores, closestToPin, teamsByDay, scrambleScores, skinOfficialTotals, scrambleOfficialTotals, postings, paidEntries]);
 
   const activeSkinScores = useMemo(() => Object.fromEntries(players.map((player) => [player.id, skinScores[cardKey(activeSkinDay, player.id)] ?? []])), [players, skinScores, activeSkinDay]);
   const skinResults = useMemo(() => calculateSkins(players, tributeCourse, activeSkinScores, confirmed2026Rules.skinRound), [players, activeSkinScores]);
-  const skinPot = skinRoundPot(players.length, confirmed2026Rules.skinRound);
-  const skinPayouts = calculateSkinPayouts(players.length, skinResults, confirmed2026Rules.skinRound);
+  const entriesFor = useCallback((round: RoundKey) => paidEntriesForRound({ paidEntries }, round, players.length), [paidEntries, players.length]);
+  const skinEntries = entriesFor(`skins-${activeSkinDay}` as RoundKey);
+  const skinPot = skinRoundPot(skinEntries, confirmed2026Rules.skinRound);
+  const skinPayouts = calculateSkinPayouts(skinEntries, skinResults, confirmed2026Rules.skinRound);
   const scrambleResults = teams.map((team) => ({ teamId: team.id, total: teamTotal(scrambleOfficialTotals, activeScrambleDay, team.id) }));
-  const scramblePayouts = calculateScramblePayouts(scrambleResults, players.length, confirmed2026Rules.scrambleRound);
+  const scramblePayouts = calculateScramblePayouts(scrambleResults, entriesFor(`scramble-${activeScrambleDay}` as RoundKey), confirmed2026Rules.scrambleRound);
   const activeClosestToPin = Object.fromEntries(confirmed2026Rules.skinRound.closestToPinHoleNumbers.flatMap((hole) => closestToPin[cardKey(activeSkinDay, hole)] ? [[hole, closestToPin[cardKey(activeSkinDay, hole)]]] : []));
   const activeSkinRoundKey: RoundKey = `skins-${activeSkinDay}`;
   const activeScrambleRoundKey: RoundKey = `scramble-${activeScrambleDay}`;
@@ -262,7 +265,7 @@ export function TournamentConsole() {
     try {
       if (!sharedStorage) {
         // No shared ledger to start; preview data is still useful for local testing.
-        if (action === "seed-preview") applyTournamentState(makeMockTournamentState(), { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings });
+        if (action === "seed-preview") applyTournamentState(makeMockTournamentState(), { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings, setPaidEntries });
         return;
       }
       const response = await fetch("/api/tournament-state", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
@@ -274,7 +277,7 @@ export function TournamentConsole() {
       }
       window.localStorage.removeItem(scorekeeperDraftKey);
       setHydrated(false);
-      applyTournamentState(data.state, { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings });
+      applyTournamentState(data.state, { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings, setPaidEntries });
       setLocked(Boolean(data.locked));
       setSyncState("synced");
       setHydrated(true);
@@ -338,6 +341,7 @@ export function TournamentConsole() {
           activeRoundType={activeRoundType}
           setActiveRoundType={selectRoundType}
           skinPot={skinPot}
+          entriesFor={entriesFor}
           skinPayouts={skinPayouts}
           skinResults={skinResults}
           closestToPin={activeClosestToPin}
@@ -373,13 +377,14 @@ function AccessGate({ code, setCode, error, enter }: { code: string; setCode: (v
   return <main className="story-gate min-h-screen"><div className="story-gate-photo" aria-hidden="true" /><div className="story-gate-shade" /><section className="story-gate-card"><BrandLogo className="story-gate-logo" priority sizes="128px" /><p className="story-eyebrow">Otsego Club · Gaylord, Michigan</p><h1>Welcome to<br /><em>the inner circle.</em></h1><p className="story-gate-deck">The official 2026 proceedings of the East Coast Big Playas.</p><form onSubmit={(event) => { event.preventDefault(); enter(); }}><label htmlFor="clubhouse-code">Clubhouse passcode</label><div><input id="clubhouse-code" autoComplete="current-password" autoFocus type="password" value={code} onChange={(event) => setCode(event.target.value)} placeholder="Enter passcode" /><button>Enter</button></div>{error && <p role="alert" className="story-gate-error">{error}</p>}</form></section><p className="story-gate-foot">Private tournament ledger · Est. under disputed circumstances</p></main>;
 }
 
-function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, setActiveRoundType, skinPot, skinPayouts, skinResults, closestToPin, scrambleResults, scramblePayouts, teams, skinIsPosted, scrambleIsPosted, canEdit, skinScores, allClosestToPin, teamsByDay, scrambleTotals, postings, openSkins, openScramble }: {
+function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, setActiveRoundType, skinPot, entriesFor, skinPayouts, skinResults, closestToPin, scrambleResults, scramblePayouts, teams, skinIsPosted, scrambleIsPosted, canEdit, skinScores, allClosestToPin, teamsByDay, scrambleTotals, postings, openSkins, openScramble }: {
   players: Player[];
   activeScoreDay: ScoreDay;
   setActiveScoreDay: (day: ScoreDay) => void;
   activeRoundType: RoundType;
   setActiveRoundType: (roundType: RoundType) => void;
   skinPot: ReturnType<typeof skinRoundPot>;
+  entriesFor: (round: RoundKey) => number;
   skinPayouts: Record<number, number>;
   skinResults: ReturnType<typeof calculateSkins>;
   closestToPin: Record<number, string>;
@@ -397,15 +402,17 @@ function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, 
   openSkins: () => void;
   openScramble: () => void;
 }) {
-  const roundPot = players.length * confirmed2026Rules.skinRound.playerEntryFee;
-  const tournamentPot = roundPot * 5;
-  const dayPot = (day: SkinDay) => roundPot * (day === "thursday" ? 1 : 2);
+  const potFor = (round: RoundKey) => entriesFor(round) * confirmed2026Rules.skinRound.playerEntryFee;
+  const roundPot = potFor(`skins-${activeScoreDay === "payouts" ? "thursday" : activeScoreDay}` as RoundKey);
+  const tournamentPot = allRoundKeys.reduce((sum, round) => sum + potFor(round), 0);
+  const dayPot = (day: SkinDay) => potFor(`skins-${day}` as RoundKey) + (day === "thursday" ? 0 : potFor(`scramble-${day}` as RoundKey));
   const dayNav = <nav className="scoring-day-nav" aria-label="Scoring day">
     {(["thursday", "friday", "saturday", "payouts"] as const).map((day) => <button key={day} type="button" aria-pressed={activeScoreDay === day} onClick={() => setActiveScoreDay(day)}><strong>{day === "payouts" ? "Total payouts" : capitalize(day)}</strong><small>${day === "payouts" ? tournamentPot : dayPot(day)}</small></button>)}
   </nav>;
 
-  if (activeScoreDay === "payouts") return <div className="space-y-6">{dayNav}<PayoutDashboard players={players} skinScores={skinScores} closestToPin={allClosestToPin} teamsByDay={teamsByDay} scrambleTotals={scrambleTotals} postings={postings} canEdit={canEdit} /></div>;
+  if (activeScoreDay === "payouts") return <div className="space-y-6">{dayNav}<PayoutDashboard players={players} skinScores={skinScores} closestToPin={allClosestToPin} teamsByDay={teamsByDay} scrambleTotals={scrambleTotals} postings={postings} entriesFor={entriesFor} canEdit={canEdit} /></div>;
 
+  const scramblePot = activeScoreDay === "thursday" ? 0 : potFor(`scramble-${activeScoreDay}` as RoundKey);
   const selectedRound: RoundType = activeScoreDay === "thursday" ? "skins" : activeRoundType;
   const isSkins = selectedRound === "skins";
   const isPosted = isSkins ? skinIsPosted : scrambleIsPosted;
@@ -425,13 +432,13 @@ function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, 
     <section className={`day-pot-summary ${activeScoreDay !== "thursday" ? "has-scramble" : ""}`} aria-label={`${capitalize(activeScoreDay)} prize pool`}>
       <div><span>{capitalize(activeScoreDay)} pot</span><strong>${dayPot(activeScoreDay)}</strong><small>{activeScoreDay === "thursday" ? "one $460 round" : "two $460 rounds"}</small></div>
       <div><span>Skins round</span><strong>${roundPot}</strong><small>${skinPot.skinsTotal} skins · ${skinPot.closestToPinTotal} CTP</small></div>
-      {activeScoreDay !== "thursday" ? <div><span>Scramble round</span><strong>${roundPot}</strong><small>${roundPot - confirmed2026Rules.scrambleRound.secondPlacePrize} first · ${confirmed2026Rules.scrambleRound.secondPlacePrize} second</small></div> : null}
+      {activeScoreDay !== "thursday" ? <div><span>Scramble round</span><strong>${scramblePot}</strong><small>${scramblePot - confirmed2026Rules.scrambleRound.secondPlacePrize} first · ${confirmed2026Rules.scrambleRound.secondPlacePrize} second</small></div> : null}
     </section>
     <nav className="scoring-round-nav" aria-label={`${capitalize(activeScoreDay)} round type`}>{roundOptions.map((round) => <button key={round.id} type="button" aria-pressed={selectedRound === round.id} onClick={() => setActiveRoundType(round.id)}><strong>{round.title}</strong></button>)}</nav>
     <section className="club-hero grid gap-5 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
       <BrandLogo className="club-hero-logo" decorative sizes="150px" />
       <div><p className="club-kicker">{capitalize(activeScoreDay)} score ledger</p><h2 className="club-display mt-3 text-4xl sm:text-6xl">{isSkins ? "Skins." : "Scramble."}</h2>{!isSkins ? <p className="mt-3 text-sm text-stone-300">Six team scorecards · first and second place payouts</p> : null}</div>
-      <div className={`grid ${isSkins ? "grid-cols-2" : "grid-cols-3"} gap-2`}><Stat label="Status" value={isPosted ? "Posted" : "Draft"} detail="" />{!isSkins ? <Stat label="Cards" value={String(teams.length)} detail="teams" /> : null}<Stat label="Purse" value={`$${isSkins ? skinPot.total : players.length * confirmed2026Rules.scrambleRound.playerEntryFee}`} detail="" /></div>
+      <div className={`grid ${isSkins ? "grid-cols-2" : "grid-cols-3"} gap-2`}><Stat label="Status" value={isPosted ? "Posted" : "Draft"} detail="" />{!isSkins ? <Stat label="Cards" value={String(teams.length)} detail="teams" /> : null}<Stat label="Purse" value={`$${isSkins ? skinPot.total : scramblePot}`} detail="" /></div>
     </section>
     {isSkins && (isPosted || canEdit) ? <HoleByHoleSkins players={players} results={skinResults} payouts={skinPayouts} /> : null}
     <section className={`grid gap-4 ${isPosted || canEdit ? "lg:grid-cols-[minmax(0,1fr)_19rem]" : ""}`}>
@@ -636,4 +643,4 @@ function updateHoleScore(scores: HoleScore[] | undefined, holeNumber: number, ra
 function teamName(teams: ReturnType<typeof makeTeams>, teamId: string) { return teams.find((team) => team.id === teamId)?.name ?? "Unknown team"; }
 function swapTeamPlayer(teams: ReturnType<typeof makeTeams>, teamId: string, slotIndex: number, nextPlayerId: string) { const sourceTeam = teams.find((team) => team.id === teamId); const previousPlayerId = sourceTeam?.playerIds[slotIndex]; if (!previousPlayerId || previousPlayerId === nextPlayerId) return teams; const occupiedTeam = teams.find((team) => team.playerIds.includes(nextPlayerId)); const occupiedIndex = occupiedTeam?.playerIds.indexOf(nextPlayerId) ?? -1; return teams.map((team) => ({ ...team, playerIds: team.playerIds.map((playerId, index) => team.id === teamId && index === slotIndex ? nextPlayerId : team.id === occupiedTeam?.id && index === occupiedIndex ? previousPlayerId : playerId) })); }
 function capitalize(value: string) { return value.charAt(0).toUpperCase() + value.slice(1); }
-function applyTournamentState(state: TournamentState, setters: { setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; setSkinScores: React.Dispatch<React.SetStateAction<Scores>>; setClosestToPin: React.Dispatch<React.SetStateAction<Record<string, string>>>; setTeamsByDay: React.Dispatch<React.SetStateAction<Record<ScrambleDay, Team[]>>>; setScrambleScores: React.Dispatch<React.SetStateAction<Scores>>; setSkinOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; setScrambleOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; setPostings: React.Dispatch<React.SetStateAction<Partial<Record<RoundKey, RoundPosting>>>> }) { const players = state.players?.length ? state.players : startingRoster; const legacyTeams = (state as TournamentState & { teams?: Team[] }).teams; setters.setPlayers(players); setters.setSkinScores(state.skinScores ?? {}); setters.setClosestToPin(state.closestToPin ?? {}); setters.setTeamsByDay(state.teamsByDay ?? { friday: legacyTeams?.length ? legacyTeams : makeTeams(players), saturday: legacyTeams?.length ? legacyTeams : makeTeams(players) }); setters.setScrambleScores(state.scrambleScores ?? {}); setters.setSkinOfficialTotals(state.skinOfficialTotals ?? {}); setters.setScrambleOfficialTotals(state.scrambleOfficialTotals ?? {}); setters.setPostings(state.postings ?? {}); }
+function applyTournamentState(state: TournamentState, setters: { setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; setSkinScores: React.Dispatch<React.SetStateAction<Scores>>; setClosestToPin: React.Dispatch<React.SetStateAction<Record<string, string>>>; setTeamsByDay: React.Dispatch<React.SetStateAction<Record<ScrambleDay, Team[]>>>; setScrambleScores: React.Dispatch<React.SetStateAction<Scores>>; setSkinOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; setScrambleOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; setPostings: React.Dispatch<React.SetStateAction<Partial<Record<RoundKey, RoundPosting>>>>; setPaidEntries: React.Dispatch<React.SetStateAction<Partial<Record<RoundKey, number>>>> }) { const players = state.players?.length ? state.players : startingRoster; const legacyTeams = (state as TournamentState & { teams?: Team[] }).teams; setters.setPlayers(players); setters.setSkinScores(state.skinScores ?? {}); setters.setClosestToPin(state.closestToPin ?? {}); setters.setTeamsByDay(state.teamsByDay ?? { friday: legacyTeams?.length ? legacyTeams : makeTeams(players), saturday: legacyTeams?.length ? legacyTeams : makeTeams(players) }); setters.setScrambleScores(state.scrambleScores ?? {}); setters.setSkinOfficialTotals(state.skinOfficialTotals ?? {}); setters.setScrambleOfficialTotals(state.scrambleOfficialTotals ?? {}); setters.setPostings(state.postings ?? {}); setters.setPaidEntries(state.paidEntries ?? {}); }

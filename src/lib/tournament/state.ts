@@ -26,4 +26,11 @@ export type TournamentState = {
    * cannot change the roster or the teams. Clearing it is a backend-only action.
    */
   lockedAt?: string;
+  /**
+   * How many $20 entries a round was actually paid for, when that differs from
+   * the size of the field. A player who pays and then does not play leaves the
+   * pot untouched but stops being scored, so the two numbers come apart. Absent
+   * means the round's pot is simply the field size.
+   */
+  paidEntries?: Partial<Record<RoundKey, number>>;
 };

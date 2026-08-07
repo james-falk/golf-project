@@ -14,13 +14,14 @@ const skinDays: SkinDay[] = ["thursday", "friday", "saturday"];
 const scrambleDays: ScrambleDay[] = ["friday", "saturday"];
 const cardKey = (day: string, id: string | number) => `${day}:${id}`;
 
-export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay, scrambleTotals, postings, canEdit }: {
+export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay, scrambleTotals, postings, entriesFor, canEdit }: {
   players: Player[];
   skinScores: Scores;
   closestToPin: Record<string, string>;
   teamsByDay: Record<ScrambleDay, Team[]>;
   scrambleTotals: Record<string, string>;
   postings: Partial<Record<RoundKey, RoundPosting>>;
+  entriesFor: (round: RoundKey) => number;
   canEdit: boolean;
 }) {
   const [scope, setScope] = useState<PayoutScope>("total");
@@ -34,21 +35,22 @@ export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay,
     return {
       day,
       results,
-      payoutByHole: calculateSkinPayouts(players.length, results, confirmed2026Rules.skinRound),
+      payoutByHole: calculateSkinPayouts(entriesFor(`skins-${day}` as RoundKey), results, confirmed2026Rules.skinRound),
       closestToPinWinnerIds: confirmed2026Rules.skinRound.closestToPinHoleNumbers.flatMap((hole) => closestToPin[cardKey(day, hole)] ? [closestToPin[cardKey(day, hole)]] : []),
     };
-  }), [closestToPin, includedSkinDays, players, skinScores]);
+  }), [closestToPin, entriesFor, includedSkinDays, players, skinScores]);
 
   const scrambleRounds = useMemo(() => includedScrambleDays.map((day) => {
     const teams = teamsByDay[day];
     const results = teams.map((team) => ({ teamId: team.id, total: Number(scrambleTotals[cardKey(day, team.id)]) || 0 }));
-    return { day, teams, payouts: calculateScramblePayouts(results, players.length, confirmed2026Rules.scrambleRound) };
-  }), [includedScrambleDays, players.length, scrambleTotals, teamsByDay]);
+    return { day, teams, payouts: calculateScramblePayouts(results, entriesFor(`scramble-${day}` as RoundKey), confirmed2026Rules.scrambleRound) };
+  }), [entriesFor, includedScrambleDays, scrambleTotals, teamsByDay]);
 
   const payoutRows = useMemo(() => calculatePlayerPayoutBreakdowns(players, skinRounds, scrambleRounds, confirmed2026Rules.skinRound.closestToPinPrize), [players, scrambleRounds, skinRounds]);
   const selectedPlayer = players.find((player) => player.id === selectedPlayerId) ?? players[0];
   const leader = payoutRows[0];
-  const prizePool = includedSkinDays.length * skinRoundPot(players.length, confirmed2026Rules.skinRound).total + includedScrambleDays.length * players.length * confirmed2026Rules.scrambleRound.playerEntryFee;
+  const prizePool = includedSkinDays.reduce((sum, day) => sum + skinRoundPot(entriesFor(`skins-${day}` as RoundKey), confirmed2026Rules.skinRound).total, 0)
+    + includedScrambleDays.reduce((sum, day) => sum + entriesFor(`scramble-${day}` as RoundKey) * confirmed2026Rules.scrambleRound.playerEntryFee, 0);
   const awarded = payoutRows.reduce((total, row) => total + row.total, 0);
   const postedCount = includedSkinDays.filter((day) => postings[`skins-${day}`]?.status === "posted").length + includedScrambleDays.filter((day) => postings[`scramble-${day}`]?.status === "posted").length;
   const roundCount = includedSkinDays.length + includedScrambleDays.length;
