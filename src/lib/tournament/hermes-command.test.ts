@@ -35,6 +35,17 @@ describe("Hermes scoring commands", () => {
     expect(result.state.closestToPin["saturday:6"]).toBe("player-10");
   });
 
+  it("only accepts a closest to pin on a hole that has one", () => {
+    // The par 3s are 6, 9, 13 and 17. A number like 1 means someone is counting
+    // "the first CTP" rather than naming a hole, and it must not silently land.
+    for (const hole of [6, 9, 13, 17]) {
+      expect(applyHermesScoringCommand(openBoard(), { type: "ctp", day: "thursday", hole, player: "Jeff" }).state.closestToPin[`thursday:${hole}`]).toBe("player-4");
+    }
+    for (const hole of [1, 2, 3, 4, 18]) {
+      expect(() => applyHermesScoringCommand(openBoard(), { type: "ctp", day: "thursday", hole, player: "Jeff" })).toThrow(/closest-to-pin holes are 6, 9, 13, 17/);
+    }
+  });
+
   it("rejects malformed cards and Thursday scramble", () => {
     expect(() => applyHermesScoringCommand(openBoard(), { type: "player-card", day: "thursday", player: "Ethan", scores: [4, 5] })).toThrow("exactly 18");
     expect(() => applyHermesScoringCommand(openBoard(), { type: "round-status", day: "thursday", round: "scramble", status: "posted" })).toThrow("no Thursday scramble");

@@ -1,3 +1,4 @@
+import { confirmed2026Rules } from "./config";
 import type { TournamentState } from "./state";
 
 type PlayerDay = "thursday" | "friday" | "saturday";
@@ -61,6 +62,18 @@ function validateCard(scores: number[]) {
   scores.forEach(validateStrokes);
 }
 
+/**
+ * Closest to pin is only played on the par 3s. Filing one against any other hole
+ * silently lands somewhere the payout never reads, so it is refused with the
+ * holes that do count — the numbers are holes, not "the first CTP, the second".
+ */
+function validateClosestToPinHole(hole: number) {
+  const holes = confirmed2026Rules.skinRound.closestToPinHoleNumbers;
+  if (!holes.includes(hole)) {
+    throw new Error(`Hole ${hole} does not have a closest to pin. The closest-to-pin holes are ${holes.join(", ")}`);
+  }
+}
+
 /** A posted round is on the public board, so it must be reopened before anything in it changes. */
 function validateRoundOpen(state: TournamentState, day: string, round: "skins" | "scramble") {
   const key = `${round}-${day}` as keyof TournamentState["postings"];
@@ -102,6 +115,7 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
   if (command.type === "ctp") {
     validateRoundOpen(state, command.day, "skins");
     validateHole(command.hole);
+    validateClosestToPinHole(command.hole);
     const player = resolveNamed(state.players, command.player, "Player");
     state.closestToPin[`${command.day}:${command.hole}`] = player.id;
     return { state, summary: `${command.day} CTP hole ${command.hole}: ${player.name}` };
