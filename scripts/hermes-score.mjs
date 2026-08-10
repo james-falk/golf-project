@@ -22,11 +22,23 @@ function usage() {
   player-card <day> <player> <18 scores> [--id key]
   player-hole <day> <player> <hole> <strokes> [--id key]
   ctp <day> <hole> <player> [--id key]
-  scramble-card <day> <team> <18 scores> [--id key]
-  scramble-hole <day> <team> <hole> <strokes> [--id key]
+  scramble-total <day> <team> <to par>      e.g. scramble-total friday "Team 3" -5
   round-status <day> <skins|scramble> <review|posted> [--id key]
 
 Wrap multi-word player or team names in quotes.`;
+}
+
+/** Accepts -5, +3, 5 under, 3 over, E or even. */
+function parseToPar(raw) {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (value === "e" || value === "even" || value === "level") return 0;
+  const under = value.match(/^(\d+)\s*(under|down)$/);
+  if (under) return -Number(under[1]);
+  const over = value.match(/^(\d+)\s*(over|up)$/);
+  if (over) return Number(over[1]);
+  const signed = Number(value);
+  if (!Number.isFinite(signed)) throw new Error(`Cannot read "${raw}" as a score against par. Use -5, +3 or E`);
+  return signed;
 }
 
 function takeId(values) {
@@ -57,8 +69,7 @@ function parse() {
   if (name === "player-card") command = { type: name, day: values[0], player: values[1], scores: values.slice(2).map(Number) };
   else if (name === "player-hole") command = { type: name, day: values[0], player: values[1], hole: Number(values[2]), strokes: Number(values[3]) };
   else if (name === "ctp") command = { type: name, day: values[0], hole: Number(values[1]), player: values[2] };
-  else if (name === "scramble-card") command = { type: name, day: values[0], team: values[1], scores: values.slice(2).map(Number) };
-  else if (name === "scramble-hole") command = { type: name, day: values[0], team: values[1], hole: Number(values[2]), strokes: Number(values[3]) };
+  else if (name === "scramble-total") command = { type: name, day: values[0], team: values[1], toPar: parseToPar(values[2]) };
   else if (name === "round-status") command = { type: name, day: values[0], round: values[1], status: values[2] };
   else throw new Error(`Unknown command: ${name}`);
   return { method: "POST", body: { idempotencyKey, command } };

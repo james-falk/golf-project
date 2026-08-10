@@ -1,4 +1,5 @@
 import { confirmed2026Rules } from "./config";
+import { classicCourse } from "./seed";
 import type { TournamentState } from "./state";
 
 type PlayerDay = "thursday" | "friday" | "saturday";
@@ -8,8 +9,7 @@ export type HermesScoringCommand =
   | { type: "player-card"; day: PlayerDay; player: string; scores: number[] }
   | { type: "player-hole"; day: PlayerDay; player: string; hole: number; strokes: number }
   | { type: "ctp"; day: PlayerDay; hole: number; player: string }
-  | { type: "scramble-card"; day: ScrambleDay; team: string; scores: number[] }
-  | { type: "scramble-hole"; day: ScrambleDay; team: string; hole: number; strokes: number }
+  | { type: "scramble-total"; day: ScrambleDay; team: string; toPar: number }
   | { type: "round-status"; day: PlayerDay; round: "skins" | "scramble"; status: "review" | "posted" };
 
 export type HermesCommandResult = {
@@ -60,6 +60,25 @@ function validateStrokes(strokes: number) {
 function validateCard(scores: number[]) {
   if (!Array.isArray(scores) || scores.length !== 18) throw new Error("A full card must contain exactly 18 scores");
   scores.forEach(validateStrokes);
+}
+
+const classicPar = () => classicCourse.holes.reduce((sum, hole) => sum + hole.par, 0);
+
+/** "-5", "even", "+3" — how a scramble result is actually spoken. */
+export function formatToPar(toPar: number) {
+  return toPar === 0 ? "even" : toPar > 0 ? `+${toPar}` : String(toPar);
+}
+
+/**
+ * A scramble team reports how far under or over par it finished. The range is
+ * wide enough for any real round and tight enough to catch a total typed in by
+ * mistake: 67 strokes would arrive here as +67 rather than -5.
+ */
+function validateToPar(toPar: number) {
+  if (!Number.isInteger(toPar)) throw new Error("A scramble result must be a whole number of strokes under or over par, like -5");
+  if (toPar < -30 || toPar > 30) {
+    throw new Error(`A scramble result must be between -30 and +30 against par. Received ${toPar} — send how far under par the team finished, not the total strokes`);
+  }
 }
 
 /**
@@ -121,24 +140,15 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
     return { state, summary: `${command.day} CTP hole ${command.hole}: ${player.name}` };
   }
 
-  if (command.type === "scramble-card") {
+  if (command.type === "scramble-total") {
     validateRoundOpen(state, command.day, "scramble");
-    validateCard(command.scores);
+    validateToPar(command.toPar);
     const team = resolveTeam(state.teamsByDay[command.day], command.team);
-    state.scrambleScores[`${command.day}:${team.id}`] = command.scores.map((strokes, index) => ({ holeNumber: index + 1, strokes }));
-    const cardTotal = total(command.scores);
-    return { state, total: cardTotal, summary: `${command.day} scramble: saved ${team.name}'s 18-hole card (${cardTotal})` };
-  }
-
-  if (command.type === "scramble-hole") {
-    validateRoundOpen(state, command.day, "scramble");
-    validateHole(command.hole);
-    validateStrokes(command.strokes);
-    const team = resolveTeam(state.teamsByDay[command.day], command.team);
-    const key = `${command.day}:${team.id}`;
-    state.scrambleScores[key] = replaceHole(state.scrambleScores[key], command.hole, command.strokes);
-    const cardTotal = total(cardScores(state.scrambleScores[key]));
-    return { state, total: cardTotal, summary: `${command.day} scramble: set ${team.name} hole ${command.hole} to ${command.strokes} (${state.scrambleScores[key].length}/18 holes, total ${cardTotal})` };
+    // Stored as strokes so ranking and payouts stay in one unit; the board
+    // renders it back against par.
+    const strokes = classicPar() + command.toPar;
+    state.scrambleOfficialTotals[`${command.day}:${team.id}`] = String(strokes);
+    return { state, total: strokes, summary: `${command.day} scramble: ${team.name} ${formatToPar(command.toPar)} (${strokes})` };
   }
 
   if (command.round === "scramble" && command.day === "thursday") throw new Error("There is no Thursday scramble round");

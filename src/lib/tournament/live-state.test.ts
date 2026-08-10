@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyHermesScoringCommand } from "./hermes-command";
 import { isTournamentLocked, makeCleanTournamentState, mergeSiteSave, paidEntriesForRound, teamsCoverRoster } from "./live-state";
-import { calculateSkinPayouts, skinRoundPot } from "./rules";
+import { calculateScramblePayouts, calculateSkinPayouts, skinRoundPot } from "./rules";
 import { confirmed2026Rules } from "./config";
 import { makeMockTournamentState } from "./mock-state";
 import { makeTeams, startingRoster } from "./seed";
@@ -133,8 +133,7 @@ describe("Hermes writes against a posted round", () => {
     expect(() => applyHermesScoringCommand(state, { type: "player-card", day: "thursday", player: "Ethan", scores })).toThrow(/posted/);
     expect(() => applyHermesScoringCommand(state, { type: "player-hole", day: "thursday", player: "Ethan", hole: 4, strokes: 5 })).toThrow(/posted/);
     expect(() => applyHermesScoringCommand(state, { type: "ctp", day: "thursday", hole: 6, player: "Ethan" })).toThrow(/posted/);
-    expect(() => applyHermesScoringCommand(state, { type: "scramble-card", day: "friday", team: "Team 1", scores })).toThrow(/posted/);
-    expect(() => applyHermesScoringCommand(state, { type: "scramble-hole", day: "friday", team: "Team 1", hole: 2, strokes: 3 })).toThrow(/posted/);
+    expect(() => applyHermesScoringCommand(state, { type: "scramble-total", day: "friday", team: "Team 1", toPar: -5 })).toThrow(/posted/);
   });
 
   it("accepts the same write after the commissioner returns the round to review", () => {
@@ -223,22 +222,20 @@ describe("finding a renamed team from Telegram", () => {
       index === 2 ? { ...team, name: "Swamp Division" } : team);
     return state;
   };
-  const scores = Array.from({ length: 18 }, () => 4);
-
   it("accepts the new name", () => {
-    const result = applyHermesScoringCommand(renamedBoard(), { type: "scramble-card", day: "friday", team: "Swamp Division", scores });
-    expect(result.state.scrambleScores["friday:team-3"]).toHaveLength(18);
+    const result = applyHermesScoringCommand(renamedBoard(), { type: "scramble-total", day: "friday", team: "Swamp Division", toPar: -5 });
+    expect(result.state.scrambleOfficialTotals["friday:team-3"]).toBe("67");
   });
 
   it("still accepts the position it has always had", () => {
     for (const alias of ["Team 3", "team3", "team-3"]) {
-      const result = applyHermesScoringCommand(renamedBoard(), { type: "scramble-card", day: "friday", team: alias, scores });
-      expect(result.state.scrambleScores["friday:team-3"]).toHaveLength(18);
+      const result = applyHermesScoringCommand(renamedBoard(), { type: "scramble-total", day: "friday", team: alias, toPar: -5 });
+      expect(result.state.scrambleOfficialTotals["friday:team-3"]).toBe("67");
     }
   });
 
   it("still refuses a team that does not exist", () => {
-    expect(() => applyHermesScoringCommand(renamedBoard(), { type: "scramble-card", day: "friday", team: "Team 9", scores })).toThrow(/Unknown team/);
+    expect(() => applyHermesScoringCommand(renamedBoard(), { type: "scramble-total", day: "friday", team: "Team 9", toPar: -5 })).toThrow(/Unknown team/);
   });
 });
 
@@ -271,5 +268,42 @@ describe("a player who paid and then did not play", () => {
     const paid = Object.values(payouts).reduce((a, b) => a + b, 0);
     expect(paid).toBe(380);
     expect(paid + confirmed2026Rules.skinRound.closestToPinHoleNumbers.length * confirmed2026Rules.skinRound.closestToPinPrize).toBe(460);
+  });
+});
+
+describe("a scramble result sent as a number against par", () => {
+  const board = () => ({ ...makeCleanTournamentState(null, lockedAt), postings: {} });
+
+  it("stores strokes so ranking and payouts stay in one unit", () => {
+    // The Classic is par 72, so five under is 67 on the card.
+    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: -5 }).state.scrambleOfficialTotals["friday:team-1"]).toBe("67");
+    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "saturday", team: "Team 2", toPar: 0 }).state.scrambleOfficialTotals["saturday:team-2"]).toBe("72");
+    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 3", toPar: 3 }).state.scrambleOfficialTotals["friday:team-3"]).toBe("75");
+  });
+
+  it("reads the result back the way it was spoken", () => {
+    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: -5 }).summary).toContain("-5 (67)");
+    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: 0 }).summary).toContain("even (72)");
+    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: 4 }).summary).toContain("+4 (76)");
+  });
+
+  it("catches a total typed in where a to-par was meant", () => {
+    // 67 is a plausible team score but a nonsensical result against par.
+    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: 67 })).toThrow(/not the total strokes/);
+    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: -40 })).toThrow(/between -30 and \+30/);
+    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: 1.5 })).toThrow(/whole number/);
+  });
+
+  it("ranks and pays from the stored strokes", () => {
+    let state = board();
+    for (const [team, toPar] of [["Team 1", -5], ["Team 2", -3], ["Team 3", 1]] as Array<[string, number]>) {
+      state = applyHermesScoringCommand(state, { type: "scramble-total", day: "friday", team, toPar }).state;
+    }
+    const results = state.teamsByDay.friday.map((team) => ({ teamId: team.id, total: Number(state.scrambleOfficialTotals[`friday:${team.id}`]) || 0 }));
+    const payouts = calculateScramblePayouts(results, 22, confirmed2026Rules.scrambleRound);
+    expect(payouts).toEqual([
+      { teamId: "team-1", place: 1, teamPayout: 360 },
+      { teamId: "team-2", place: 2, teamPayout: 80 },
+    ]);
   });
 });

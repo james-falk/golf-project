@@ -1233,10 +1233,10 @@ body:has(.journey-shell) .lore-button { display: none; }
 .scramble-team-score { display: flex; align-items: center; gap: 1rem; justify-self: end; }
 .scramble-team-score label { display: flex; flex-direction: column; gap: 0.3rem; }
 .scramble-team-score label > span { color: #d3ba7a; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-.scramble-team-score input { width: 5.5rem; min-height: 3.2rem; border: 1px solid #8e7c55; background: #f7f0df; color: #12332d; font-family: var(--font-club-display), Georgia, serif; font-size: 2rem; font-weight: 700; text-align: center; outline: none; }
+.scramble-team-score input { width: 6rem; min-height: 3.2rem; border: 1px solid #8e7c55; background: #f7f0df; color: #12332d; font-family: var(--font-club-display), Georgia, serif; font-size: 2rem; font-weight: 700; text-align: center; outline: none; }
 .scramble-team-score > strong { color: #f1e6ce; font-family: var(--font-club-display), Georgia, serif; font-size: 2.4rem; }
-.scramble-team-topar { min-width: 3.5rem; color: #c5b48f; font-size: 1.25rem; font-weight: 700; text-align: right; }
-.scramble-team-topar.is-under { color: #8fd6a8; }
+.scramble-team-topar { min-width: 5.5rem; color: #9fb3a8; font-size: 0.95rem; font-weight: 600; text-align: right; }
+.scramble-team-score > strong.is-under { color: #8fd6a8; }
 @media (max-width: 640px) {
   .scramble-team-card { grid-template-columns: minmax(0, 1fr); }
   .scramble-team-score { justify-self: start; }

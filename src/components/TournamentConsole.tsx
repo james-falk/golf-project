@@ -539,7 +539,7 @@ function ScrambleBoard({ canEdit, activeDay, backToDay, teams, players, renameTe
   return <div className="space-y-6">
     <button type="button" className="scoring-back" onClick={backToDay}>← {capitalize(activeDay)} overview</button>
     <SectionTitle eyebrow={`${capitalize(activeDay)} · Scramble`} title="18-hole team scramble" text={`The Classic · par ${par}`} />
-    {canEdit ? <PublicationPanel posting={posting} ready={canPublish} incompleteText="Every team needs a score before this round can be posted." publish={publish} returnToReview={returnToReview} /> : null}
+    {canEdit ? <PublicationPanel posting={posting} ready={canPublish} incompleteText="Every team needs a result against par before this round can be posted." publish={publish} returnToReview={returnToReview} /> : null}
     <div className="scramble-team-list">
       {teams.map((team, index) => {
         const key = cardKey(activeDay, team.id);
@@ -558,9 +558,15 @@ function ScrambleBoard({ canEdit, activeDay, backToDay, teams, players, renameTe
           </ul>
           <div className="scramble-team-score">
             {canEdit
-              ? <label><span>Team score</span><input inputMode="numeric" value={officialTotals[key] ?? ""} onChange={(event) => setOfficialTotals((current) => ({ ...current, [key]: event.target.value.replace(/[^0-9]/g, "") }))} placeholder="—" aria-label={`${team.name} team score`} /></label>
-              : <strong>{total || "—"}</strong>}
-            <span className={`scramble-team-topar ${total && total < par ? "is-under" : ""}`}>{formatToPar(total, par)}</span>
+              ? <label><span>To par</span><input inputMode="text" value={toParInput(officialTotals[key], par)} onChange={(event) => setOfficialTotals((current) => {
+                  const raw = event.target.value.replace(/[^0-9+-]/g, "");
+                  const parsed = raw === "" || raw === "-" || raw === "+" ? NaN : Number(raw);
+                  const next = { ...current };
+                  if (Number.isFinite(parsed)) next[key] = String(par + parsed); else delete next[key];
+                  return next;
+                })} placeholder="—" aria-label={`${team.name} strokes against par`} /></label>
+              : <strong className={total && total < par ? "is-under" : ""}>{formatToPar(total, par)}</strong>}
+            <span className="scramble-team-topar">{total ? `${total} strokes` : "—"}</span>
           </div>
         </section>;
       })}
@@ -635,6 +641,7 @@ function Archive() {
 function DayPicker<T extends string>({ days, activeDay, onChange, compact = false }: { days: readonly T[]; activeDay: T; onChange: (day: T) => void; compact?: boolean }) { return <div className={`day-picker ${compact ? "inline-flex" : "flex w-fit"}`} role="group" aria-label="Select tournament day">{days.map((day) => <button key={day} type="button" aria-pressed={activeDay === day} onClick={() => onChange(day)} className={`day-picker-button ${activeDay === day ? "day-picker-active" : ""}`}>{capitalize(day)}</button>)}</div>; }
 function SectionTitle({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) { return <section><p className="club-kicker">{eyebrow}</p><h2 className="club-display mt-2 text-3xl sm:text-4xl">{title}</h2>{text && <p className="mt-3 max-w-2xl leading-7 text-stone-300">{text}</p>}</section>; }
 function Stat({ label, value, detail }: { label: string; value: string; detail: string }) { return <div className="club-stat min-w-0 p-3 sm:p-4"><p>{label}</p><p className="club-stat-value mt-2 break-words">{value}</p>{detail && <p className="mt-1 text-xs text-[#c5b48f]">{detail}</p>}</div>; }
+function toParInput(stored: string | undefined, par: number) { const strokes = Number(stored); return Number.isFinite(strokes) && strokes > 0 ? String(strokes - par) : ""; }
 function teamTotal(officialTotals: Record<string, string>, day: string, teamId: string) { return Number(officialTotals[cardKey(day, teamId)]) || 0; }
 function formatToPar(total: number, par: number) { if (!total) return "\u2014"; const difference = total - par; return difference === 0 ? "Even" : difference > 0 ? `+${difference}` : String(difference); }
 function ordinalPlace(place: 1 | 2) { return place === 1 ? "1st" : "2nd"; }
