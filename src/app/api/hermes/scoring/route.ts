@@ -38,11 +38,20 @@ export async function GET(request: Request) {
     const rows = await sql`SELECT payload, updated_at FROM tournament_state WHERE id = ${stateId}`;
     const state = rows[0]?.payload as TournamentState | undefined;
     if (!state) return NextResponse.json({ error: "Tournament state is not initialized" }, { status: 404 });
+    // `teamsByDay` is a record of results already reported, not a roster to match
+    // against. Reading an empty list as "no teams loaded" is the obvious wrong
+    // inference, so the response says outright that it is not a blocker.
+    const reported = (day: "friday" | "saturday") => (state.teamsByDay?.[day] ?? []).length;
     return NextResponse.json({
       playerCount: state.players.length,
       scoringDays: ["thursday", "friday", "saturday"],
       players: state.players.map(({ id, name, tier }) => ({ id, name, tier })),
-      teamsByDay: state.teamsByDay,
+      scrambleTeams: {
+        note: "Scramble teams are not arranged in advance and cannot be pre-loaded. A team is created by reporting its result with scramble-total, naming the 3 or 4 players who played together. An empty list below is normal and never blocks scoring.",
+        reportedSoFar: { friday: reported("friday"), saturday: reported("saturday") },
+        friday: state.teamsByDay?.friday ?? [],
+        saturday: state.teamsByDay?.saturday ?? [],
+      },
       postings: state.postings,
       updatedAt: rows[0].updated_at,
     });
