@@ -42,21 +42,14 @@ const describeTeam = (team: Team, roster: Player[]) =>
   team.playerIds.map((id) => roster.find((player) => player.id === id)?.name ?? id).join(", ");
 
 /**
- * A team has no name, so it is identified by naming everyone on it. Every name
- * must match a player on the roster and the set must be exactly one team's
- * line-up — a partial or mixed list is refused rather than guessed at.
+ * A team is not arranged in advance and has no name: it is the group that played
+ * together, and it comes into existence the first time its result is reported.
+ * Naming the same players again finds that team rather than making a second one,
+ * so a correction updates the result instead of duplicating it.
  */
-function resolveTeam(teams: Team[], roster: Player[], query: string, day: string) {
+function resolveOrCreateTeam(teams: Team[], roster: Player[], query: string) {
   const needle = normalize(query);
   if (!needle) throw new Error("Name the players on the team");
-
-  // A bare position still works; it is an id, not a name.
-  const byPosition = needle.match(/^team\s*(\d+)$/);
-  if (byPosition) {
-    const team = teams.find((entry) => entry.id === `team-${byPosition[1]}`);
-    if (team) return team;
-    throw new Error(`Unknown team: ${query}`);
-  }
 
   const names = splitPlayerList(query);
   if (names.length < 3 || names.length > 4) {
@@ -69,17 +62,21 @@ function resolveTeam(teams: Team[], roster: Player[], query: string, day: string
     throw new Error(`That list names the same player twice: ${resolved.map((player) => player.name).join(", ")}`);
   }
 
-  const exact = teams.find((team) => team.playerIds.length === ids.size && team.playerIds.every((id) => ids.has(id)));
-  if (exact) return exact;
+  const existing = teams.find((team) => team.playerIds.length === ids.size && team.playerIds.every((id) => ids.has(id)));
+  if (existing) return { team: existing, created: false, overlaps: [] as string[] };
 
-  // Say where those players actually are rather than only refusing.
-  const spread = teams
+  // Not a blocker — only the paying teams get reported, so most players never
+  // appear. But the same player on two teams in one day would split his share
+  // twice, so it is worth saying out loud.
+  const overlaps = teams
     .filter((team) => team.playerIds.some((id) => ids.has(id)))
-    .map((team) => describeTeam(team, roster));
-  throw new Error(
-    `${resolved.map((player) => player.name).join(", ")} are not a ${day} team. `
-    + (spread.length ? `Those players sit across: ${spread.join(" | ")}` : `No ${day} team contains them.`),
-  );
+    .flatMap((team) => team.playerIds.filter((id) => ids.has(id)))
+    .map((id) => roster.find((player) => player.id === id)?.name ?? id);
+
+  const used = new Set(teams.map((team) => team.id));
+  let next = 1;
+  while (used.has(`team-${next}`)) next += 1;
+  return { team: { id: `team-${next}`, playerIds: resolved.map((player) => player.id) }, created: true, overlaps };
 }
 
 function validateHole(hole: number) {
@@ -176,12 +173,14 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
   if (command.type === "scramble-total") {
     validateRoundOpen(state, command.day, "scramble");
     validateToPar(command.toPar);
-    const team = resolveTeam(state.teamsByDay[command.day], state.players, command.team, command.day);
+    const { team, created, overlaps } = resolveOrCreateTeam(state.teamsByDay[command.day], state.players, command.team);
+    if (created) state.teamsByDay[command.day] = [...state.teamsByDay[command.day], team];
     // Stored as strokes so ranking and payouts stay in one unit; the board
     // renders it back against par.
     const strokes = classicPar() + command.toPar;
     state.scrambleOfficialTotals[`${command.day}:${team.id}`] = String(strokes);
-    return { state, total: strokes, summary: `${command.day} scramble: ${describeTeam(team, state.players)} ${formatToPar(command.toPar)} (${strokes})` };
+    const warning = overlaps.length ? ` — note ${[...new Set(overlaps)].join(", ")} already on another ${command.day} team` : "";
+    return { state, total: strokes, summary: `${command.day} scramble: ${describeTeam(team, state.players)} ${formatToPar(command.toPar)} (${strokes})${warning}` };
   }
 
   if (command.round === "scramble" && command.day === "thursday") throw new Error("There is no Thursday scramble round");

@@ -1,4 +1,4 @@
-import { makeTeams, startingRoster } from "./seed";
+import { startingRoster } from "./seed";
 import type { RoundKey, Team, TournamentState } from "./state";
 import type { Player } from "./types";
 
@@ -45,18 +45,14 @@ export function teamsCoverRoster(teams: Team[] | undefined, players: Player[]) {
  * describe the current field is rebuilt rather than carried forward.
  */
 export function makeCleanTournamentState(current: Partial<TournamentState> | null, lockedAt?: string): TournamentState {
-  const players = startingRoster;
-  const carryTeams = (day: "friday" | "saturday") => {
-    const teams = current?.teamsByDay?.[day];
-    return teamsCoverRoster(teams, players) ? (teams as Team[]) : makeTeams(players);
-  };
-
   return {
-    players,
+    players: startingRoster,
     skinScores: {},
     skinOfficialTotals: {},
     closestToPin: {},
-    teamsByDay: { friday: carryTeams("friday"), saturday: carryTeams("saturday") },
+    // Scramble teams are not arranged in advance. A team comes into existence
+    // when its result is reported, so a fresh board has none.
+    teamsByDay: { friday: [], saturday: [] },
     scrambleScores: {},
     scrambleOfficialTotals: {},
     postings: {},
@@ -103,8 +99,9 @@ export function changedRoundKeys(before: Partial<TournamentState>, after: Partia
 }
 
 /**
- * A locked tournament keeps exactly the teams the server has. Who is on a team
- * decides the scramble payout, and a team has nothing else to change.
+ * Teams are formed by reporting a result, so even a locked tournament gains them
+ * as the scrambles are scored. The browser cannot invent one: it only ever sends
+ * back what it loaded, and Telegram is what actually creates them.
  */
 export function lockedTeams(
   current: TournamentState["teamsByDay"] | undefined,

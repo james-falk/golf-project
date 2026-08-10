@@ -28,11 +28,12 @@ describe("starting the tournament for real", () => {
     expect(isTournamentLocked(state)).toBe(true);
   });
 
-  it("carries the arranged teams through but rebuilds any that no longer describe the field", () => {
-    const arranged = makeTeams(startingRoster).map((team) => ({ ...team, playerIds: [...team.playerIds].reverse() }));
-    const carried = makeCleanTournamentState({ teamsByDay: { friday: arranged, saturday: [] } }, lockedAt);
-    expect(carried.teamsByDay.friday.map((team) => team.playerIds)).toEqual(arranged.map((team) => team.playerIds));
-    expect(teamsCoverRoster(carried.teamsByDay.saturday, startingRoster)).toBe(true);
+  it("starts with no scramble teams at all", () => {
+    // Teams are not arranged in advance; each one is created when its result is
+    // reported, so a fresh board has none on either day.
+    const state = makeCleanTournamentState(makeMockTournamentState(), lockedAt);
+    expect(state.teamsByDay.friday).toEqual([]);
+    expect(state.teamsByDay.saturday).toEqual([]);
   });
 
   it("rejects a team set that drops or duplicates a player", () => {
@@ -151,54 +152,68 @@ describe("Hermes writes against a posted round", () => {
 });
 
 
-describe("naming a scramble team by its players", () => {
+describe("a scramble team is created by reporting its result", () => {
   const board = () => makeCleanTournamentState(null, lockedAt);
-  // makeTeams deals round-robin, so team-1 is every sixth player from the top.
-  const teamOne = () => {
-    const ids = makeTeams(startingRoster)[0].playerIds;
-    return ids.map((id) => startingRoster.find((p) => p.id === id)!.name);
-  };
+  const four = ["Roger", "Logan", "Mitchell", "Aiden"];
+  const three = ["Ethan", "Spencer", "Cam"];
+  const report = (state: TournamentState, team: string, toPar: number) =>
+    applyHermesScoringCommand(state, { type: "scramble-total", day: "friday", team, toPar });
 
-  it("finds the team when every player on it is named", () => {
-    const result = applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: teamOne().join(", "), toPar: -5 });
-    expect(result.state.scrambleOfficialTotals["friday:team-1"]).toBe("67");
-    expect(result.summary).toContain(teamOne().join(", "));
+  it("creates the team the first time, from nothing", () => {
+    const before = board();
+    expect(before.teamsByDay.friday).toHaveLength(0);
+    const after = report(before, four.join(", "), -5).state;
+    expect(after.teamsByDay.friday).toHaveLength(1);
+    expect(after.scrambleOfficialTotals[`friday:${after.teamsByDay.friday[0].id}`]).toBe("67");
   });
 
-  it("does not care about order, spacing or separator", () => {
-    const names = teamOne();
-    for (const query of [names.join(","), names.join(" and "), [...names].reverse().join(" / "), names.join("  ,  ")]) {
-      const result = applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: query, toPar: -2 });
-      expect(result.state.scrambleOfficialTotals["friday:team-1"]).toBe("70");
-    }
+  it("names the same players again to correct, rather than making a second team", () => {
+    let state = report(board(), four.join(", "), -5).state;
+    state = report(state, [...four].reverse().join(" and "), -7).state;
+    expect(state.teamsByDay.friday).toHaveLength(1);
+    expect(state.scrambleOfficialTotals[`friday:${state.teamsByDay.friday[0].id}`]).toBe("65");
   });
 
-  it("refuses a name that is not a player", () => {
-    const wrong = [...teamOne().slice(1), "Maxwell"].join(", ");
-    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: wrong, toPar: -5 })).toThrow(/Unknown player: Maxwell/);
+  it("keeps separate teams apart and gives each its own id", () => {
+    let state = report(board(), four.join(", "), -5).state;
+    state = report(state, three.join(", "), -2).state;
+    expect(state.teamsByDay.friday.map((team) => team.id)).toEqual(["team-1", "team-2"]);
+    expect(state.teamsByDay.friday.map((team) => team.playerIds.length)).toEqual([4, 3]);
   });
 
-  it("refuses a set of real players who are not a team together", () => {
-    const mixed = [...teamOne().slice(0, 3), makeTeams(startingRoster)[1].playerIds.map((id) => startingRoster.find((p) => p.id === id)!.name)[0]].join(", ");
-    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: mixed, toPar: -5 })).toThrow(/are not a friday team/);
+  it("does not touch the other day", () => {
+    const state = report(board(), four.join(", "), -5).state;
+    expect(state.teamsByDay.saturday).toHaveLength(0);
   });
 
-  it("refuses a partial line-up rather than guessing", () => {
-    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: teamOne().slice(0, 2).join(", "), toPar: -5 })).toThrow(/3 or 4 players/);
+  it("still refuses a name that is not a player", () => {
+    expect(() => report(board(), "Roger, Logan, Mitchell, Maxwell", -5)).toThrow(/Unknown player: Maxwell/);
   });
 
-  it("refuses the same player listed twice", () => {
-    const names = teamOne();
-    const doubled = [names[0], names[0], names[1], names[2]].join(", ");
-    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: doubled, toPar: -5 })).toThrow(/names the same player twice/);
+  it("still refuses a partial list or a repeated name", () => {
+    expect(() => report(board(), "Roger, Logan", -5)).toThrow(/3 or 4 players/);
+    expect(() => report(board(), "Roger, Roger, Logan, Aiden", -5)).toThrow(/names the same player twice/);
   });
 
-  it("still accepts the bare position, which is an id rather than a name", () => {
-    for (const alias of ["Team 1", "team1", "team-1"]) {
-      const result = applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: alias, toPar: -5 });
-      expect(result.state.scrambleOfficialTotals["friday:team-1"]).toBe("67");
-    }
-    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 9", toPar: -5 })).toThrow(/Unknown team/);
+  it("warns, without blocking, when a player turns up on two teams the same day", () => {
+    const state = report(board(), four.join(", "), -5).state;
+    const result = report(state, "Roger, Jeff, James, Greg", -3);
+    expect(result.summary).toContain("Roger already on another friday team");
+    expect(result.state.teamsByDay.friday).toHaveLength(2);
+  });
+
+  it("pays first and second from only the two teams that were reported", () => {
+    // Only the teams in the money get reported, so the round is two teams long.
+    let state = report(board(), four.join(", "), -8).state;
+    state = report(state, three.join(", "), -6).state;
+    const results = state.teamsByDay.friday.map((team) => ({
+      teamId: team.id,
+      total: Number(state.scrambleOfficialTotals[`friday:${team.id}`]) || 0,
+    }));
+    expect(calculateScramblePayouts(results, 22, confirmed2026Rules.scrambleRound)).toEqual([
+      { teamId: "team-1", place: 1, teamPayout: 360 },
+      { teamId: "team-2", place: 2, teamPayout: 80 },
+    ]);
   });
 });
 
@@ -235,39 +250,28 @@ describe("a player who paid and then did not play", () => {
 });
 
 describe("a scramble result sent as a number against par", () => {
-  const board = () => ({ ...makeCleanTournamentState(null, lockedAt), postings: {} });
+  const board = () => makeCleanTournamentState(null, lockedAt);
+  const team = "Roger, Logan, Mitchell, Aiden";
+  const report = (toPar: number) =>
+    applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team, toPar });
 
   it("stores strokes so ranking and payouts stay in one unit", () => {
-    // The Classic is par 72, so five under is 67 on the card.
-    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: -5 }).state.scrambleOfficialTotals["friday:team-1"]).toBe("67");
-    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "saturday", team: "Team 2", toPar: 0 }).state.scrambleOfficialTotals["saturday:team-2"]).toBe("72");
-    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 3", toPar: 3 }).state.scrambleOfficialTotals["friday:team-3"]).toBe("75");
+    // The Classic is par 72.
+    expect(report(-5).state.scrambleOfficialTotals["friday:team-1"]).toBe("67");
+    expect(report(0).state.scrambleOfficialTotals["friday:team-1"]).toBe("72");
+    expect(report(3).state.scrambleOfficialTotals["friday:team-1"]).toBe("75");
   });
 
   it("reads the result back the way it was spoken", () => {
-    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: -5 }).summary).toContain("-5 (67)");
-    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: 0 }).summary).toContain("even (72)");
-    expect(applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: 4 }).summary).toContain("+4 (76)");
+    expect(report(-5).summary).toContain("-5 (67)");
+    expect(report(0).summary).toContain("even (72)");
+    expect(report(4).summary).toContain("+4 (76)");
   });
 
   it("catches a total typed in where a to-par was meant", () => {
-    // 67 is a plausible team score but a nonsensical result against par.
-    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: 67 })).toThrow(/not the total strokes/);
-    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: -40 })).toThrow(/between -30 and \+30/);
-    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 1", toPar: 1.5 })).toThrow(/whole number/);
-  });
-
-  it("ranks and pays from the stored strokes", () => {
-    let state = board();
-    for (const [team, toPar] of [["Team 1", -5], ["Team 2", -3], ["Team 3", 1]] as Array<[string, number]>) {
-      state = applyHermesScoringCommand(state, { type: "scramble-total", day: "friday", team, toPar }).state;
-    }
-    const results = state.teamsByDay.friday.map((team) => ({ teamId: team.id, total: Number(state.scrambleOfficialTotals[`friday:${team.id}`]) || 0 }));
-    const payouts = calculateScramblePayouts(results, 22, confirmed2026Rules.scrambleRound);
-    expect(payouts).toEqual([
-      { teamId: "team-1", place: 1, teamPayout: 360 },
-      { teamId: "team-2", place: 2, teamPayout: 80 },
-    ]);
+    expect(() => report(67)).toThrow(/not the total strokes/);
+    expect(() => report(-40)).toThrow(/between -30 and \+30/);
+    expect(() => report(1.5)).toThrow(/whole number/);
   });
 });
 
