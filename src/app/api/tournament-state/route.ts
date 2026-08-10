@@ -37,6 +37,13 @@ async function writeState(sql: NonNullable<ReturnType<typeof database>>, state: 
   return rows[0].updated_at;
 }
 
+/** Any real scoring at all — a single card, result or closest-to-pin winner. */
+function hasScores(state: TournamentState | null) {
+  if (!state) return false;
+  return [state.skinScores, state.scrambleScores, state.skinOfficialTotals, state.scrambleOfficialTotals, state.closestToPin]
+    .some((record) => Object.keys(record ?? {}).length > 0);
+}
+
 /**
  * Reads the ledger. This handler never writes: a page load must not be able to
  * change, reseed or overwrite a tournament that is in progress.
@@ -105,12 +112,26 @@ export async function POST(request: Request) {
   }
 
   if (action === "seed-preview") {
+    if (hasScores(current)) {
+      return NextResponse.json(
+        { error: "There are scores on the board. Loading preview data would overwrite them." },
+        { status: 409 },
+      );
+    }
     const state = makeMockTournamentState();
     const updatedAt = await writeState(sql, state);
     return NextResponse.json({ state, updatedAt, shared: true, locked: false });
   }
 
   if (action === "start-tournament") {
+    // Once real scoring exists, this button would erase it. Clearing a played
+    // round is a deliberate backend action, not one click behind a confirm.
+    if (hasScores(current)) {
+      return NextResponse.json(
+        { error: "There are scores on the board. Clearing a tournament that has been played is a backend-only action." },
+        { status: 409 },
+      );
+    }
     const state = makeCleanTournamentState(current, new Date().toISOString());
     const updatedAt = await writeState(sql, state);
     return NextResponse.json({ state, updatedAt, shared: true, locked: true });

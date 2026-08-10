@@ -307,3 +307,57 @@ describe("a scramble result sent as a number against par", () => {
     ]);
   });
 });
+
+describe("nothing in the ledger is lost on a save", () => {
+  // A played Thursday: cards, a CTP winner, a posting and a paid-entry override.
+  const played = () => ({
+    players: startingRoster,
+    teamsByDay: { friday: makeTeams(startingRoster), saturday: makeTeams(startingRoster) },
+    skinScores: { "thursday:player-1": card },
+    skinOfficialTotals: { "thursday:player-1": "72" },
+    closestToPin: { "thursday:6": "player-4" },
+    scrambleScores: {},
+    scrambleOfficialTotals: {},
+    postings: { "skins-thursday": { status: "posted" as const, postedAt: lockedAt, revision: 2 } },
+    paidEntries: { "skins-thursday": 23 },
+  }) as TournamentState;
+
+  it("keeps the paid-entry override that sets Thursday's pot", () => {
+    const stored = played();
+    const { merged } = mergeSiteSave(stored, stored);
+    expect(merged.paidEntries).toEqual({ "skins-thursday": 23 });
+    expect(skinRoundPot(paidEntriesForRound(merged, "skins-thursday", 22), confirmed2026Rules.skinRound).total).toBe(460);
+  });
+
+  it("keeps it even when the browser sends a payload that has none", () => {
+    const stored = played();
+    const stale = { ...stored };
+    delete (stale as Partial<TournamentState>).paidEntries;
+    const { merged } = mergeSiteSave(stored, stale as TournamentState);
+    expect(merged.paidEntries).toEqual({ "skins-thursday": 23 });
+  });
+
+  it("survives repeated saves rather than decaying over time", () => {
+    let state = played();
+    for (let i = 0; i < 25; i++) state = mergeSiteSave(state, state).merged;
+    expect(state.paidEntries).toEqual({ "skins-thursday": 23 });
+    expect(state.skinScores["thursday:player-1"]).toHaveLength(18);
+    expect(state.closestToPin["thursday:6"]).toBe("player-4");
+    expect(state.postings["skins-thursday"]?.revision).toBe(2);
+  });
+
+  it("carries every key the stored ledger had", () => {
+    const stored = played();
+    const { merged } = mergeSiteSave(stored, stored);
+    for (const key of Object.keys(stored)) {
+      expect(merged, `"${key}" was dropped by a site save`).toHaveProperty(key);
+    }
+  });
+
+  it("does not lose a field this merge has never heard of", () => {
+    // Stands in for any column added to the state after this code was written.
+    const stored = { ...played(), somethingAddedLater: { keep: true } } as unknown as TournamentState;
+    const { merged } = mergeSiteSave(stored, played());
+    expect((merged as unknown as Record<string, unknown>).somethingAddedLater).toEqual({ keep: true });
+  });
+});

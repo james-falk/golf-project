@@ -134,6 +134,10 @@ export function lockedTeams(
 export function mergeSiteSave(current: Partial<TournamentState>, incoming: TournamentState) {
   const locked = isTournamentLocked(current as TournamentState);
   const merged: TournamentState = {
+    // Start from what is already stored so a field this function does not know
+    // about survives the round trip. Rebuilding the payload from a fixed list of
+    // keys silently drops anything added to the state later.
+    ...(current as TournamentState),
     players: locked ? (current.players ?? incoming.players) : incoming.players,
     teamsByDay: locked ? lockedTeams(current.teamsByDay, incoming.teamsByDay) : incoming.teamsByDay,
     skinScores: { ...(current.skinScores ?? {}), ...(incoming.skinScores ?? {}) },
@@ -142,6 +146,9 @@ export function mergeSiteSave(current: Partial<TournamentState>, incoming: Tourn
     scrambleScores: { ...(current.scrambleScores ?? {}), ...(incoming.scrambleScores ?? {}) },
     scrambleOfficialTotals: { ...(current.scrambleOfficialTotals ?? {}), ...(incoming.scrambleOfficialTotals ?? {}) },
     postings: { ...(current.postings ?? {}), ...(incoming.postings ?? {}) },
+    // Paid-entry overrides are set from the backend only, so the stored value
+    // always wins over whatever the browser happens to be holding.
+    ...(current.paidEntries ? { paidEntries: current.paidEntries } : {}),
     ...(current.lockedAt ? { lockedAt: current.lockedAt } : {}),
   };
 
