@@ -1,6 +1,8 @@
 import { confirmed2026Rules } from "./config";
 import { classicCourse } from "./seed";
+import type { Team } from "./state";
 import type { TournamentState } from "./state";
+import type { Player } from "./types";
 
 type PlayerDay = "thursday" | "friday" | "saturday";
 type ScrambleDay = "friday" | "saturday";
@@ -31,22 +33,53 @@ function resolveNamed<T extends { name: string }>(entries: T[], query: string, k
   throw new Error(`Ambiguous ${kind.toLowerCase()} “${query}”: ${matches.map((entry) => entry.name).join(", ")}`);
 }
 
+/** "Roger, Logan, Mitchell, Aiden" — however it was typed. */
+function splitPlayerList(query: string) {
+  return query.split(/,|\/|\band\b|&|\+/i).map((part) => part.trim()).filter(Boolean);
+}
+
+const describeTeam = (team: Team, roster: Player[]) =>
+  team.playerIds.map((id) => roster.find((player) => player.id === id)?.name ?? id).join(", ");
+
 /**
- * Teams can be renamed at any point, so a Telegram message may use the new name
- * or the position it has always had. "Team 3", "team3" and "team-3" all resolve
- * to the third team even after it becomes something else.
+ * A team has no name, so it is identified by naming everyone on it. Every name
+ * must match a player on the roster and the set must be exactly one team's
+ * line-up — a partial or mixed list is refused rather than guessed at.
  */
-function resolveTeam<T extends { id: string; name: string }>(teams: T[], query: string) {
+function resolveTeam(teams: Team[], roster: Player[], query: string, day: string) {
   const needle = normalize(query);
-  if (!needle) throw new Error("Team is required");
+  if (!needle) throw new Error("Name the players on the team");
+
+  // A bare position still works; it is an id, not a name.
   const byPosition = needle.match(/^team\s*(\d+)$/);
   if (byPosition) {
     const team = teams.find((entry) => entry.id === `team-${byPosition[1]}`);
     if (team) return team;
+    throw new Error(`Unknown team: ${query}`);
   }
-  const byId = teams.find((entry) => normalize(entry.id) === needle);
-  if (byId) return byId;
-  return resolveNamed(teams, query, "Team");
+
+  const names = splitPlayerList(query);
+  if (names.length < 3 || names.length > 4) {
+    throw new Error(`Name the 3 or 4 players on the team, separated by commas. Received ${names.length} in "${query}"`);
+  }
+
+  const resolved = names.map((name) => resolveNamed(roster, name, "Player"));
+  const ids = new Set(resolved.map((player) => player.id));
+  if (ids.size !== resolved.length) {
+    throw new Error(`That list names the same player twice: ${resolved.map((player) => player.name).join(", ")}`);
+  }
+
+  const exact = teams.find((team) => team.playerIds.length === ids.size && team.playerIds.every((id) => ids.has(id)));
+  if (exact) return exact;
+
+  // Say where those players actually are rather than only refusing.
+  const spread = teams
+    .filter((team) => team.playerIds.some((id) => ids.has(id)))
+    .map((team) => describeTeam(team, roster));
+  throw new Error(
+    `${resolved.map((player) => player.name).join(", ")} are not a ${day} team. `
+    + (spread.length ? `Those players sit across: ${spread.join(" | ")}` : `No ${day} team contains them.`),
+  );
 }
 
 function validateHole(hole: number) {
@@ -143,12 +176,12 @@ export function applyHermesScoringCommand(current: TournamentState, command: Her
   if (command.type === "scramble-total") {
     validateRoundOpen(state, command.day, "scramble");
     validateToPar(command.toPar);
-    const team = resolveTeam(state.teamsByDay[command.day], command.team);
+    const team = resolveTeam(state.teamsByDay[command.day], state.players, command.team, command.day);
     // Stored as strokes so ranking and payouts stay in one unit; the board
     // renders it back against par.
     const strokes = classicPar() + command.toPar;
     state.scrambleOfficialTotals[`${command.day}:${team.id}`] = String(strokes);
-    return { state, total: strokes, summary: `${command.day} scramble: ${team.name} ${formatToPar(command.toPar)} (${strokes})` };
+    return { state, total: strokes, summary: `${command.day} scramble: ${describeTeam(team, state.players)} ${formatToPar(command.toPar)} (${strokes})` };
   }
 
   if (command.round === "scramble" && command.day === "thursday") throw new Error("There is no Thursday scramble round");

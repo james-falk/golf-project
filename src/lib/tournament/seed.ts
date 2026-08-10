@@ -39,7 +39,6 @@ export function makeTeams(players: Player[]) {
   const teamCount = 6;
   return Array.from({ length: teamCount }, (_, teamIndex) => ({
     id: `team-${teamIndex + 1}`,
-    name: `Team ${teamIndex + 1}`,
     playerIds: players.filter((_, playerIndex) => playerIndex % teamCount === teamIndex).map((player) => player.id),
   }));
 }

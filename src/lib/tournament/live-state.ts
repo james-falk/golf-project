@@ -102,28 +102,18 @@ export function changedRoundKeys(before: Partial<TournamentState>, after: Partia
   return [...changed];
 }
 
-const cleanTeamName = (value: unknown, fallback: string) =>
-  (typeof value === "string" ? value.trim().slice(0, 40) : "") || fallback;
-
 /**
- * A locked tournament keeps the teams the server already has, except for their
- * names. Who is on a team decides the scramble payout and stays frozen; what a
- * team calls itself is decoration and can be changed any time.
+ * A locked tournament keeps exactly the teams the server has. Who is on a team
+ * decides the scramble payout, and a team has nothing else to change.
  */
 export function lockedTeams(
   current: TournamentState["teamsByDay"] | undefined,
   incoming: TournamentState["teamsByDay"] | undefined,
 ): TournamentState["teamsByDay"] {
-  const days = ["friday", "saturday"] as const;
-  const merged = {} as TournamentState["teamsByDay"];
-  days.forEach((day) => {
-    const serverTeams = current?.[day] ?? incoming?.[day] ?? [];
-    merged[day] = serverTeams.map((team) => {
-      const renamed = incoming?.[day]?.find((entry) => entry.id === team.id);
-      return { ...team, name: cleanTeamName(renamed?.name, team.name) };
-    });
-  });
-  return merged;
+  return {
+    friday: current?.friday ?? incoming?.friday ?? [],
+    saturday: current?.saturday ?? incoming?.saturday ?? [],
+  };
 }
 
 /**

@@ -22,10 +22,10 @@ function usage() {
   player-card <day> <player> <18 scores> [--id key]
   player-hole <day> <player> <hole> <strokes> [--id key]
   ctp <day> <hole> <player> [--id key]
-  scramble-total <day> <team> <to par>      e.g. scramble-total friday "Team 3" -5
+  scramble-total <day> <players> <to par>   e.g. scramble-total friday "Roger, Logan, Mitchell, Aiden" -5
   round-status <day> <skins|scramble> <review|posted> [--id key]
 
-Wrap multi-word player or team names in quotes.`;
+Wrap player names in quotes. A scramble team is named by listing everyone on it.`;
 }
 
 /** Accepts -5, +3, 5 under, 3 over, E or even. */

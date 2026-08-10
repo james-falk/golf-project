@@ -29,9 +29,9 @@ describe("starting the tournament for real", () => {
   });
 
   it("carries the arranged teams through but rebuilds any that no longer describe the field", () => {
-    const arranged = makeTeams(startingRoster).map((team, index) => ({ ...team, name: `Arranged ${index + 1}` }));
+    const arranged = makeTeams(startingRoster).map((team) => ({ ...team, playerIds: [...team.playerIds].reverse() }));
     const carried = makeCleanTournamentState({ teamsByDay: { friday: arranged, saturday: [] } }, lockedAt);
-    expect(carried.teamsByDay.friday.map((team) => team.name)).toEqual(arranged.map((team) => team.name));
+    expect(carried.teamsByDay.friday.map((team) => team.playerIds)).toEqual(arranged.map((team) => team.playerIds));
     expect(teamsCoverRoster(carried.teamsByDay.saturday, startingRoster)).toBe(true);
   });
 
@@ -150,92 +150,55 @@ describe("Hermes writes against a posted round", () => {
   });
 });
 
-describe("naming a scramble team after the field is locked", () => {
-  const lockedBoard = () => {
-    const state = makeCleanTournamentState(null, lockedAt);
-    state.teamsByDay.friday[0] = { ...state.teamsByDay.friday[0], name: "Team 1" };
-    return state;
+
+describe("naming a scramble team by its players", () => {
+  const board = () => makeCleanTournamentState(null, lockedAt);
+  // makeTeams deals round-robin, so team-1 is every sixth player from the top.
+  const teamOne = () => {
+    const ids = makeTeams(startingRoster)[0].playerIds;
+    return ids.map((id) => startingRoster.find((p) => p.id === id)!.name);
   };
 
-  it("accepts a new team name but keeps the locked line-up", () => {
-    const current = lockedBoard();
-    const originalLineUp = current.teamsByDay.friday[0].playerIds;
-    const incoming: TournamentState = {
-      ...current,
-      teamsByDay: {
-        ...current.teamsByDay,
-        friday: current.teamsByDay.friday.map((team, index) =>
-          index === 0 ? { ...team, name: "The Hydration Marshals", playerIds: ["player-1"] } : team),
-      },
-    };
-    const { merged } = mergeSiteSave(current, incoming);
-    expect(merged.teamsByDay.friday[0].name).toBe("The Hydration Marshals");
-    expect(merged.teamsByDay.friday[0].playerIds).toEqual(originalLineUp);
+  it("finds the team when every player on it is named", () => {
+    const result = applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: teamOne().join(", "), toPar: -5 });
+    expect(result.state.scrambleOfficialTotals["friday:team-1"]).toBe("67");
+    expect(result.summary).toContain(teamOne().join(", "));
   });
 
-  it("will not let a renamed team smuggle in an extra team or drop one", () => {
-    const current = lockedBoard();
-    const incoming: TournamentState = {
-      ...current,
-      teamsByDay: {
-        ...current.teamsByDay,
-        friday: [{ id: "team-99", name: "Ringers", playerIds: ["player-1", "player-2"] }],
-      },
-    };
-    const { merged } = mergeSiteSave(current, incoming);
-    expect(merged.teamsByDay.friday).toHaveLength(current.teamsByDay.friday.length);
-    expect(merged.teamsByDay.friday.some((team) => team.id === "team-99")).toBe(false);
-  });
-
-  it("falls back to the stored name when the browser sends a blank one", () => {
-    const current = lockedBoard();
-    const incoming: TournamentState = {
-      ...current,
-      teamsByDay: {
-        ...current.teamsByDay,
-        friday: current.teamsByDay.friday.map((team, index) => index === 0 ? { ...team, name: "   " } : team),
-      },
-    };
-    const { merged } = mergeSiteSave(current, incoming);
-    expect(merged.teamsByDay.friday[0].name).toBe("Team 1");
-  });
-
-  it("still refuses a line-up change on an unnamed save", () => {
-    const current = lockedBoard();
-    const incoming: TournamentState = {
-      ...current,
-      teamsByDay: {
-        ...current.teamsByDay,
-        friday: current.teamsByDay.friday.map((team, index) =>
-          index === 0 ? { ...team, playerIds: [...team.playerIds].reverse() } : team),
-      },
-    };
-    const { merged } = mergeSiteSave(current, incoming);
-    expect(merged.teamsByDay.friday[0].playerIds).toEqual(current.teamsByDay.friday[0].playerIds);
-  });
-});
-
-describe("finding a renamed team from Telegram", () => {
-  const renamedBoard = () => {
-    const state = makeCleanTournamentState(null, lockedAt);
-    state.teamsByDay.friday = state.teamsByDay.friday.map((team, index) =>
-      index === 2 ? { ...team, name: "Swamp Division" } : team);
-    return state;
-  };
-  it("accepts the new name", () => {
-    const result = applyHermesScoringCommand(renamedBoard(), { type: "scramble-total", day: "friday", team: "Swamp Division", toPar: -5 });
-    expect(result.state.scrambleOfficialTotals["friday:team-3"]).toBe("67");
-  });
-
-  it("still accepts the position it has always had", () => {
-    for (const alias of ["Team 3", "team3", "team-3"]) {
-      const result = applyHermesScoringCommand(renamedBoard(), { type: "scramble-total", day: "friday", team: alias, toPar: -5 });
-      expect(result.state.scrambleOfficialTotals["friday:team-3"]).toBe("67");
+  it("does not care about order, spacing or separator", () => {
+    const names = teamOne();
+    for (const query of [names.join(","), names.join(" and "), [...names].reverse().join(" / "), names.join("  ,  ")]) {
+      const result = applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: query, toPar: -2 });
+      expect(result.state.scrambleOfficialTotals["friday:team-1"]).toBe("70");
     }
   });
 
-  it("still refuses a team that does not exist", () => {
-    expect(() => applyHermesScoringCommand(renamedBoard(), { type: "scramble-total", day: "friday", team: "Team 9", toPar: -5 })).toThrow(/Unknown team/);
+  it("refuses a name that is not a player", () => {
+    const wrong = [...teamOne().slice(1), "Maxwell"].join(", ");
+    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: wrong, toPar: -5 })).toThrow(/Unknown player: Maxwell/);
+  });
+
+  it("refuses a set of real players who are not a team together", () => {
+    const mixed = [...teamOne().slice(0, 3), makeTeams(startingRoster)[1].playerIds.map((id) => startingRoster.find((p) => p.id === id)!.name)[0]].join(", ");
+    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: mixed, toPar: -5 })).toThrow(/are not a friday team/);
+  });
+
+  it("refuses a partial line-up rather than guessing", () => {
+    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: teamOne().slice(0, 2).join(", "), toPar: -5 })).toThrow(/3 or 4 players/);
+  });
+
+  it("refuses the same player listed twice", () => {
+    const names = teamOne();
+    const doubled = [names[0], names[0], names[1], names[2]].join(", ");
+    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: doubled, toPar: -5 })).toThrow(/names the same player twice/);
+  });
+
+  it("still accepts the bare position, which is an id rather than a name", () => {
+    for (const alias of ["Team 1", "team1", "team-1"]) {
+      const result = applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: alias, toPar: -5 });
+      expect(result.state.scrambleOfficialTotals["friday:team-1"]).toBe("67");
+    }
+    expect(() => applyHermesScoringCommand(board(), { type: "scramble-total", day: "friday", team: "Team 9", toPar: -5 })).toThrow(/Unknown team/);
   });
 });
 

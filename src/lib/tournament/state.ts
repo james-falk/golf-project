@@ -1,7 +1,8 @@
 import type { HoleScore, Player } from "./types";
 
 export type Scores = Record<string, HoleScore[]>;
-export type Team = { id: string; name: string; playerIds: string[] };
+/** A team has no name. It is identified by who is on it. */
+export type Team = { id: string; playerIds: string[] };
 export type SkinDay = "thursday" | "friday" | "saturday";
 export type ScrambleDay = "friday" | "saturday";
 export type RoundKey = `skins-${SkinDay}` | `scramble-${ScrambleDay}`;

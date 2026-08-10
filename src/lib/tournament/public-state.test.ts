@@ -5,8 +5,8 @@ import type { TournamentState } from "./state";
 const state: TournamentState = {
   players: [{ id: "jeff", name: "Jeff", tier: "A" }],
   teamsByDay: {
-    friday: [{ id: "team-1", name: "Team 1", playerIds: ["jeff"] }],
-    saturday: [{ id: "team-1", name: "Team 1", playerIds: ["jeff"] }],
+    friday: [{ id: "team-1", playerIds: ["jeff"] }],
+    saturday: [{ id: "team-1", playerIds: ["jeff"] }],
   },
   skinScores: {
     "thursday:jeff": [{ holeNumber: 1, strokes: 4 }],

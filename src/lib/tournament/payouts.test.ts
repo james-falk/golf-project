@@ -19,7 +19,7 @@ describe("calculatePlayerPayoutBreakdowns", () => {
       payoutByHole: { 1: 40, 2: 40, 3: 40 },
       closestToPinWinnerIds: ["b", "a"],
     }], [{
-      teams: [{ id: "team-1", name: "One", playerIds: ["a", "b", "c", "d"] }],
+      teams: [{ id: "team-1", playerIds: ["a", "b", "c", "d"] }],
       payouts: [{ teamId: "team-1", place: 1, teamPayout: 240 }],
     }], 20);
 
@@ -30,7 +30,7 @@ describe("calculatePlayerPayoutBreakdowns", () => {
 
   it("splits tied team payouts by the actual team size", () => {
     const rows = calculatePlayerPayoutBreakdowns(players.slice(0, 2), [], [{
-      teams: [{ id: "team-1", name: "One", playerIds: ["a", "b"] }],
+      teams: [{ id: "team-1", playerIds: ["a", "b"] }],
       payouts: [{ teamId: "team-1", place: 1, teamPayout: 180 }],
     }], 20);
     expect(rows.map((row) => row.scramble)).toEqual([90, 90]);
@@ -40,7 +40,7 @@ describe("calculatePlayerPayoutBreakdowns", () => {
 describe("2025 parity", () => {
   it("rounds a team share down, so an uneven team matches the old board", () => {
     // 23 players: five teams of four and one of three. First place is $380.
-    const threePlayerTeam = { id: "team-6", name: "Team 6", playerIds: ["x", "y", "z"] };
+    const threePlayerTeam = { id: "team-6", playerIds: ["x", "y", "z"] };
     const [share] = calculatePlayerPayoutBreakdowns(
       [{ id: "x", name: "X", tier: "A" }],
       [],
