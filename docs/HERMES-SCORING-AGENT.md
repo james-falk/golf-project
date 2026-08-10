@@ -29,7 +29,7 @@ Suggested typed commands are intentionally simple:
 
 ```text
 Ethan skins: 4 5 4 5 4 3 5 4 3 4 5 4 3 4 4 5 3 4
-Team 2 scramble: 4 4 3 5 4 2 4 4 3 4 5 4 3 4 4 5 3 4
+Team 2 scramble: 5 under
 CTP hole 6: James
 Correct Ethan hole 7 to 6
 Show unverified cards
@@ -50,7 +50,7 @@ locked.
 The first production slice should expose server-only mutations for:
 
 - player hole score upsert
-- scramble team hole score upsert
+- scramble team result against par
 - official card-total check
 - closest-to-pin winner
 - round lock/unlock
