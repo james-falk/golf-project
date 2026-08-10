@@ -6,7 +6,7 @@ import { calculatePlayerPayoutBreakdowns } from "@/lib/tournament/payouts";
 import { calculateScramblePayouts, calculateSkinPayouts, calculateSkins, skinRoundPot } from "@/lib/tournament/rules";
 import { tributeCourse } from "@/lib/tournament/seed";
 import type { RoundKey, RoundPosting, Scores, ScrambleDay, SkinDay, Team } from "@/lib/tournament/state";
-import type { HoleScore, Player } from "@/lib/tournament/types";
+import type { Player } from "@/lib/tournament/types";
 
 type PayoutScope = "total" | SkinDay;
 
@@ -25,7 +25,6 @@ export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay,
   canEdit: boolean;
 }) {
   const [scope, setScope] = useState<PayoutScope>("total");
-  const [selectedPlayerId, setSelectedPlayerId] = useState(players[0]?.id ?? "");
   const includedSkinDays = useMemo(() => scope === "total" ? skinDays : [scope], [scope]);
   const includedScrambleDays = useMemo(() => scope === "total" ? scrambleDays : scope === "thursday" ? [] : [scope], [scope]);
 
@@ -47,7 +46,6 @@ export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay,
   }), [entriesFor, includedScrambleDays, scrambleTotals, teamsByDay]);
 
   const payoutRows = useMemo(() => calculatePlayerPayoutBreakdowns(players, skinRounds, scrambleRounds, confirmed2026Rules.skinRound.closestToPinPrize), [players, scrambleRounds, skinRounds]);
-  const selectedPlayer = players.find((player) => player.id === selectedPlayerId) ?? players[0];
   const leader = payoutRows[0];
   const prizePool = includedSkinDays.reduce((sum, day) => sum + skinRoundPot(entriesFor(`skins-${day}` as RoundKey), confirmed2026Rules.skinRound).total, 0)
     + includedScrambleDays.reduce((sum, day) => sum + entriesFor(`scramble-${day}` as RoundKey) * confirmed2026Rules.scrambleRound.playerEntryFee, 0);
@@ -74,56 +72,19 @@ export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay,
         <div className="payout-table-scroll"><div className="payout-table-head"><span>Player</span><span>Skins</span><span>CTP</span><span>Scramble</span><span>Total</span></div>
         <div>{payoutRows.map((row, index) => {
           const player = players.find((entry) => entry.id === row.playerId);
-          return <button key={row.playerId} type="button" onClick={() => setSelectedPlayerId(row.playerId)} className={`payout-row ${selectedPlayer?.id === row.playerId ? "is-selected" : ""}`}>
+          return <div key={row.playerId} className="payout-row">
             <span><b>{index + 1}</b><strong>{player?.name ?? "Unknown"}</strong><small>{player?.tier} tier</small></span><span>{formatMoney(row.skins)}</span><span>{formatMoney(row.closestToPin)}</span><span>{formatMoney(row.scramble)}</span><span>{formatMoney(row.total)}</span>
-          </button>;
+          </div>;
         })}</div></div>
       </div>
       <aside className="club-card self-start p-5"><p className="club-kicker">Current leader</p><p className="club-display mt-3 text-3xl">{leader && leader.total > 0 ? players.find((player) => player.id === leader.playerId)?.name : "Still counting"}</p><p className="mt-2 text-2xl font-bold text-[#ead292]">{leader ? formatMoney(leader.total) : "$0"}</p>{canEdit ? <p className="mt-3 text-xs leading-5 text-stone-400">Draft calculations update as complete cards are entered. Results become official when each round is posted.</p> : null}</aside>
     </section>
 
-    {selectedPlayer ? <PlayerLedger player={selectedPlayer} scope={scope} skinRounds={skinRounds} scrambleRounds={scrambleRounds} skinScores={skinScores} scrambleTotals={scrambleTotals} teamsByDay={teamsByDay} postings={postings} /> : null}
   </div>;
 }
 
-function PlayerLedger({ player, scope, skinRounds, scrambleRounds, skinScores, scrambleTotals, teamsByDay, postings }: {
-  player: Player;
-  scope: PayoutScope;
-  skinRounds: Array<{ day: SkinDay; results: ReturnType<typeof calculateSkins>; payoutByHole: Record<number, number>; closestToPinWinnerIds: string[] }>;
-  scrambleRounds: Array<{ day: ScrambleDay; teams: Team[]; payouts: ReturnType<typeof calculateScramblePayouts> }>;
-  skinScores: Scores;
-  scrambleTotals: Record<string, string>;
-  teamsByDay: Record<ScrambleDay, Team[]>;
-  postings: Partial<Record<RoundKey, RoundPosting>>;
-}) {
-  return <section className="player-ledger">
-    <header><div><p className="club-kicker">Individual tournament file</p><h3>{player.name}</h3></div><span>{player.tier} tier</span></header>
-    <div className="player-ledger-rounds">
-      {skinRounds.map((round) => {
-        const card = skinScores[cardKey(round.day, player.id)];
-        const wins = round.results.filter((result) => result.winnerId === player.id).length;
-        const ctpWins = round.closestToPinWinnerIds.filter((winnerId) => winnerId === player.id).length;
-        const skinPayout = round.results.filter((result) => result.winnerId === player.id).reduce((sum, result) => sum + (round.payoutByHole[result.holeNumber] ?? 0), 0);
-        return <PlayerRoundCard key={`skins-${round.day}`} title={`${capitalize(round.day)} · Skins`} status={postings[`skins-${round.day}`]?.status} total={sumScores(card)} detail={`${wins} skin${wins === 1 ? "" : "s"} · ${ctpWins} CTP · ${formatMoney(skinPayout + ctpWins * confirmed2026Rules.skinRound.closestToPinPrize)}`} scores={card} />;
-      })}
-      {scrambleRounds.map((round) => {
-        const team = teamsByDay[round.day].find((entry) => entry.playerIds.includes(player.id));
-        const teamScore = team ? Number(scrambleTotals[cardKey(round.day, team.id)]) || 0 : 0;
-        const payout = team ? round.payouts.find((entry) => entry.teamId === team.id) : undefined;
-        const share = payout && team ? payout.teamPayout / Math.max(team.playerIds.length, 1) : 0;
-        return <PlayerRoundCard key={`scramble-${round.day}`} title={`${capitalize(round.day)} · Scramble`} status={postings[`scramble-${round.day}`]?.status} total={teamScore} detail={`${team?.name ?? "No team"} · ${payout ? `${ordinal(payout.place)} place · ${formatMoney(share)} share` : "$0 share"}`} />;
-      })}
-    </div>
-    <p className="player-ledger-note">{scope === "total" ? "Five-round tournament record" : `${capitalize(scope)} record`} · select another player above to inspect their cards.</p>
-  </section>;
-}
 
-function PlayerRoundCard({ title, status, total, detail, scores }: { title: string; status?: RoundPosting["status"]; total: number; detail: string; scores?: HoleScore[] }) {
-  return <article className="player-round-card"><div><p>{title}</p><span>{status === "posted" ? "Posted" : "Draft"}</span></div><strong>{total || "—"}</strong><small>{detail}</small>{scores ? <div className="player-card-holes">{Array.from({ length: 18 }, (_, index) => <span key={index}>{scores.find((score) => score.holeNumber === index + 1)?.strokes ?? "—"}</span>)}</div> : null}</article>;
-}
 
 function PayoutStat({ label, value }: { label: string; value: string }) { return <div className="club-stat p-3"><p>{label}</p><strong className="mt-2 block text-lg text-[#f1dfb3]">{value}</strong></div>; }
-function sumScores(scores: HoleScore[] | undefined) { return scores?.reduce((sum, score) => sum + score.strokes, 0) ?? 0; }
 function formatMoney(value: number) { return `$${Number.isInteger(value) ? value : value.toFixed(2)}`; }
 function capitalize(value: string) { return value.charAt(0).toUpperCase() + value.slice(1); }
-function ordinal(place: 1 | 2) { return place === 1 ? "1st" : "2nd"; }
