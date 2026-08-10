@@ -28,6 +28,13 @@ export type TournamentState = {
    */
   lockedAt?: string;
   /**
+   * Players who did not play a particular round, by round. A skin is only
+   * awarded once everyone in that round's field has a number on the hole, so
+   * somebody who sat out has to be taken out of the field or the whole round
+   * stays uncalculated. Their money stays in the pot: see `paidEntries`.
+   */
+  absences?: Partial<Record<RoundKey, string[]>>;
+  /**
    * How many $20 entries a round was actually paid for, when that differs from
    * the size of the field. A player who pays and then does not play leaves the
    * pot untouched but stops being scored, so the two numbers come apart. Absent

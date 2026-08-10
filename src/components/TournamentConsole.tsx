@@ -7,7 +7,7 @@ import { ClubPet } from "@/components/ClubPet";
 import { PayoutDashboard } from "@/components/PayoutDashboard";
 import type { AccessRole } from "@/lib/access";
 import { confirmed2026Rules } from "@/lib/tournament/config";
-import { allRoundKeys, makeCleanTournamentState, paidEntriesForRound } from "@/lib/tournament/live-state";
+import { allRoundKeys, fieldForRound, makeCleanTournamentState, paidEntriesForRound } from "@/lib/tournament/live-state";
 import { makeMockTournamentState } from "@/lib/tournament/mock-state";
 import { calculateScramblePayouts, calculateSkinPayouts, calculateSkins, skinRoundPot, strokesReceivedOnHole } from "@/lib/tournament/rules";
 import { classicCourse, makeTeams, startingRoster, tributeCourse } from "@/lib/tournament/seed";
@@ -48,6 +48,7 @@ export function TournamentConsole() {
   const [scrambleOfficialTotals, setScrambleOfficialTotals] = useState<Record<string, string>>({});
   const [postings, setPostings] = useState<Partial<Record<RoundKey, RoundPosting>>>({});
   const [paidEntries, setPaidEntries] = useState<Partial<Record<RoundKey, number>>>({});
+  const [absences, setAbsences] = useState<Partial<Record<RoundKey, string[]>>>({});
   const [activeSkinDay, setActiveSkinDay] = useState<SkinDay>("thursday");
   const [activeScrambleDay, setActiveScrambleDay] = useState<ScrambleDay>("friday");
   const [activeScoreDay, setActiveScoreDay] = useState<ScoreDay>("thursday");
@@ -160,7 +161,7 @@ export function TournamentConsole() {
         if (saved) try { state = JSON.parse(saved) as TournamentState; } catch { /* Use the official seed. */ }
       }
       if (cancelled) return;
-      applyTournamentState(state ?? emptyTournamentState(), { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings, setPaidEntries });
+      applyTournamentState(state ?? emptyTournamentState(), { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings, setPaidEntries, setAbsences });
       setHydrated(true);
     };
     load();
@@ -169,7 +170,7 @@ export function TournamentConsole() {
 
   useEffect(() => {
     if (!hydrated || accessRole !== "scorekeeper") return;
-    const state = { players, skinScores, closestToPin, teamsByDay, scrambleScores, skinOfficialTotals, scrambleOfficialTotals, postings, paidEntries } satisfies TournamentState;
+    const state = { players, skinScores, closestToPin, teamsByDay, scrambleScores, skinOfficialTotals, scrambleOfficialTotals, postings, paidEntries, absences } satisfies TournamentState;
     window.localStorage.setItem(scorekeeperDraftKey, JSON.stringify(state));
     if (!sharedStorage) return;
     const timeout = window.setTimeout(async () => {
@@ -181,10 +182,11 @@ export function TournamentConsole() {
       } catch { setSyncState("error"); }
     }, 650);
     return () => window.clearTimeout(timeout);
-  }, [hydrated, accessRole, sharedStorage, players, skinScores, closestToPin, teamsByDay, scrambleScores, skinOfficialTotals, scrambleOfficialTotals, postings, paidEntries]);
+  }, [hydrated, accessRole, sharedStorage, players, skinScores, closestToPin, teamsByDay, scrambleScores, skinOfficialTotals, scrambleOfficialTotals, postings, paidEntries, absences]);
 
-  const activeSkinScores = useMemo(() => Object.fromEntries(players.map((player) => [player.id, skinScores[cardKey(activeSkinDay, player.id)] ?? []])), [players, skinScores, activeSkinDay]);
-  const skinResults = useMemo(() => calculateSkins(players, tributeCourse, activeSkinScores, confirmed2026Rules.skinRound), [players, activeSkinScores]);
+  const skinField = useMemo(() => fieldForRound({ absences }, `skins-${activeSkinDay}` as RoundKey, players), [absences, activeSkinDay, players]);
+  const activeSkinScores = useMemo(() => Object.fromEntries(skinField.map((player) => [player.id, skinScores[cardKey(activeSkinDay, player.id)] ?? []])), [skinField, skinScores, activeSkinDay]);
+  const skinResults = useMemo(() => calculateSkins(skinField, tributeCourse, activeSkinScores, confirmed2026Rules.skinRound), [skinField, activeSkinScores]);
   const entriesFor = useCallback((round: RoundKey) => paidEntriesForRound({ paidEntries }, round, players.length), [paidEntries, players.length]);
   const skinEntries = entriesFor(`skins-${activeSkinDay}` as RoundKey);
   const skinPot = skinRoundPot(skinEntries, confirmed2026Rules.skinRound);
@@ -196,7 +198,7 @@ export function TournamentConsole() {
   const activeScrambleRoundKey: RoundKey = `scramble-${activeScrambleDay}`;
   const skinIsPosted = postings[activeSkinRoundKey]?.status === "posted";
   const scrambleIsPosted = postings[activeScrambleRoundKey]?.status === "posted";
-  const skinCardsReady = players.every((player) => {
+  const skinCardsReady = skinField.every((player) => {
     const key = cardKey(activeSkinDay, player.id);
     const card = skinScores[key];
     return card?.length === 18;
@@ -262,7 +264,7 @@ export function TournamentConsole() {
     try {
       if (!sharedStorage) {
         // No shared ledger to start; preview data is still useful for local testing.
-        if (action === "seed-preview") applyTournamentState(makeMockTournamentState(), { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings, setPaidEntries });
+        if (action === "seed-preview") applyTournamentState(makeMockTournamentState(), { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings, setPaidEntries, setAbsences });
         return;
       }
       const response = await fetch("/api/tournament-state", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
@@ -274,7 +276,7 @@ export function TournamentConsole() {
       }
       window.localStorage.removeItem(scorekeeperDraftKey);
       setHydrated(false);
-      applyTournamentState(data.state, { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings, setPaidEntries });
+      applyTournamentState(data.state, { setPlayers, setSkinScores, setClosestToPin, setTeamsByDay, setScrambleScores, setSkinOfficialTotals, setScrambleOfficialTotals, setPostings, setPaidEntries, setAbsences });
       setLocked(Boolean(data.locked));
       setSyncState("synced");
       setHydrated(true);
@@ -339,6 +341,8 @@ export function TournamentConsole() {
           setActiveRoundType={selectRoundType}
           skinPot={skinPot}
           entriesFor={entriesFor}
+          skinFieldSize={skinField.length}
+          absences={absences}
           skinPayouts={skinPayouts}
           skinResults={skinResults}
           closestToPin={activeClosestToPin}
@@ -356,7 +360,7 @@ export function TournamentConsole() {
           openSkins={() => switchTab("skins")}
           openScramble={() => switchTab("scramble")}
         />}
-        {tab === "skins" && (canEdit || skinIsPosted ? <SkinsBoard canEdit={canEdit} activeDay={activeSkinDay} backToDay={() => switchTab("central")} players={players} scores={skinScores} updateScore={updateSkinScore} closestToPin={closestToPin} setClosestToPin={setClosestToPin} posting={postings[activeSkinRoundKey]} canPublish={skinCardsReady && skinCtpReady} publish={() => publishRound(activeSkinRoundKey)} returnToReview={() => returnRoundToReview(activeSkinRoundKey)} /> : <AwaitingBoard course="Skins" day={activeSkinDay} days={skinDays} onDayChange={setActiveSkinDay} />)}
+        {tab === "skins" && (canEdit || skinIsPosted ? <SkinsBoard canEdit={canEdit} activeDay={activeSkinDay} backToDay={() => switchTab("central")} players={skinField} scores={skinScores} updateScore={updateSkinScore} closestToPin={closestToPin} setClosestToPin={setClosestToPin} posting={postings[activeSkinRoundKey]} canPublish={skinCardsReady && skinCtpReady} publish={() => publishRound(activeSkinRoundKey)} returnToReview={() => returnRoundToReview(activeSkinRoundKey)} /> : <AwaitingBoard course="Skins" day={activeSkinDay} days={skinDays} onDayChange={setActiveSkinDay} />)}
         {tab === "scramble" && (canEdit || scrambleIsPosted ? <ScrambleBoard canEdit={canEdit} activeDay={activeScrambleDay} backToDay={() => switchTab("central")} teams={teams} players={players} officialTotals={scrambleOfficialTotals} setOfficialTotals={setScrambleOfficialTotals} payouts={scramblePayouts} posting={postings[activeScrambleRoundKey]} canPublish={scrambleCardsReady} publish={() => publishRound(activeScrambleRoundKey)} returnToReview={() => returnRoundToReview(activeScrambleRoundKey)} /> : <AwaitingBoard course="Scramble" day={activeScrambleDay} days={scrambleDays} onDayChange={setActiveScrambleDay} />)}
         {tab === "setup" && canEdit && <Setup players={players} setPlayers={setPlayers} resetAllTeams={() => setTeamsByDay({ friday: makeTeams(startingRoster), saturday: makeTeams(startingRoster) })} locked={locked} lifecycleBusy={lifecycleBusy} runLifecycleAction={runLifecycleAction} />}
         {tab === "archive" && <Archive />}
@@ -374,7 +378,7 @@ function AccessGate({ code, setCode, error, enter }: { code: string; setCode: (v
   return <main className="story-gate min-h-screen"><div className="story-gate-photo" aria-hidden="true" /><div className="story-gate-shade" /><section className="story-gate-card"><BrandLogo className="story-gate-logo" priority sizes="128px" /><p className="story-eyebrow">Otsego Club · Gaylord, Michigan</p><h1>Welcome to<br /><em>the inner circle.</em></h1><p className="story-gate-deck">The official 2026 proceedings of the East Coast Big Playas.</p><form onSubmit={(event) => { event.preventDefault(); enter(); }}><label htmlFor="clubhouse-code">Clubhouse passcode</label><div><input id="clubhouse-code" autoComplete="current-password" autoFocus type="password" value={code} onChange={(event) => setCode(event.target.value)} placeholder="Enter passcode" /><button>Enter</button></div>{error && <p role="alert" className="story-gate-error">{error}</p>}</form></section><p className="story-gate-foot">Private tournament ledger · Est. under disputed circumstances</p></main>;
 }
 
-function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, setActiveRoundType, skinPot, entriesFor, skinPayouts, skinResults, closestToPin, scrambleResults, scramblePayouts, teams, skinIsPosted, scrambleIsPosted, canEdit, skinScores, allClosestToPin, teamsByDay, scrambleTotals, postings, openSkins, openScramble }: {
+function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, setActiveRoundType, skinPot, entriesFor, skinFieldSize, absences, skinPayouts, skinResults, closestToPin, scrambleResults, scramblePayouts, teams, skinIsPosted, scrambleIsPosted, canEdit, skinScores, allClosestToPin, teamsByDay, scrambleTotals, postings, openSkins, openScramble }: {
   players: Player[];
   activeScoreDay: ScoreDay;
   setActiveScoreDay: (day: ScoreDay) => void;
@@ -382,6 +386,8 @@ function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, 
   setActiveRoundType: (roundType: RoundType) => void;
   skinPot: ReturnType<typeof skinRoundPot>;
   entriesFor: (round: RoundKey) => number;
+  skinFieldSize: number;
+  absences: Partial<Record<RoundKey, string[]>>;
   skinPayouts: Record<number, number>;
   skinResults: ReturnType<typeof calculateSkins>;
   closestToPin: Record<number, string>;
@@ -407,7 +413,7 @@ function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, 
     {(["thursday", "friday", "saturday", "payouts"] as const).map((day) => <button key={day} type="button" aria-pressed={activeScoreDay === day} onClick={() => setActiveScoreDay(day)}><strong>{day === "payouts" ? "Total payouts" : capitalize(day)}</strong><small>${day === "payouts" ? tournamentPot : dayPot(day)}</small></button>)}
   </nav>;
 
-  if (activeScoreDay === "payouts") return <div className="space-y-6">{dayNav}<PayoutDashboard players={players} skinScores={skinScores} closestToPin={allClosestToPin} teamsByDay={teamsByDay} scrambleTotals={scrambleTotals} postings={postings} entriesFor={entriesFor} canEdit={canEdit} /></div>;
+  if (activeScoreDay === "payouts") return <div className="space-y-6">{dayNav}<PayoutDashboard players={players} skinScores={skinScores} closestToPin={allClosestToPin} teamsByDay={teamsByDay} scrambleTotals={scrambleTotals} postings={postings} entriesFor={entriesFor} absences={absences} canEdit={canEdit} /></div>;
 
   const scramblePot = activeScoreDay === "thursday" ? 0 : potFor(`scramble-${activeScoreDay}` as RoundKey);
   const selectedRound: RoundType = activeScoreDay === "thursday" ? "skins" : activeRoundType;
@@ -436,7 +442,7 @@ function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, 
     <section className="club-hero grid gap-5 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
       <BrandLogo className="club-hero-logo" decorative sizes="150px" />
       <div><p className="club-kicker">{capitalize(activeScoreDay)} score ledger</p><h2 className="club-display mt-3 text-4xl sm:text-6xl">{isSkins ? "Skins." : "Scramble."}</h2>{!isSkins ? <p className="mt-3 text-sm text-stone-300">{"Each team's result against par · first and second place payouts"}</p> : null}</div>
-      <div className={`grid ${isSkins ? "grid-cols-2" : "grid-cols-3"} gap-2`}><Stat label="Status" value={isPosted ? "Posted" : "Draft"} detail="" />{!isSkins ? <Stat label="Teams" value={String(teams.length)} detail="reported" /> : null}<Stat label="Purse" value={`$${isSkins ? skinPot.total : scramblePot}`} detail="" /></div>
+      <div className={`grid ${isSkins ? "grid-cols-3" : "grid-cols-3"} gap-2`}><Stat label="Status" value={isPosted ? "Posted" : "Draft"} detail="" />{isSkins ? <Stat label="Field" value={String(skinFieldSize)} detail="playing" /> : null}{!isSkins ? <Stat label="Teams" value={String(teams.length)} detail="reported" /> : null}<Stat label="Purse" value={`$${isSkins ? skinPot.total : scramblePot}`} detail="" /></div>
     </section>
     {isSkins && (isPosted || canEdit) ? <HoleByHoleSkins players={players} results={skinResults} payouts={skinPayouts} /> : null}
     <section className={`grid gap-4 ${isPosted || canEdit ? "lg:grid-cols-[minmax(0,1fr)_19rem]" : ""}`}>
@@ -643,4 +649,4 @@ function sumScores(scores: HoleScore[] | undefined) { return scores?.reduce((sum
 function updateHoleScore(scores: HoleScore[] | undefined, holeNumber: number, rawValue: string) { const value = Number(rawValue); const rest = (scores ?? []).filter((score) => score.holeNumber !== holeNumber); return Number.isInteger(value) && value > 0 && value < 20 ? [...rest, { holeNumber, strokes: value }].sort((a, b) => a.holeNumber - b.holeNumber) : rest; }
 function teamPlayerNames(team: { playerIds: string[] } | undefined, players: Player[]) { return (team?.playerIds ?? []).map((id) => players.find((player) => player.id === id)?.name ?? "—"); }
 function capitalize(value: string) { return value.charAt(0).toUpperCase() + value.slice(1); }
-function applyTournamentState(state: TournamentState, setters: { setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; setSkinScores: React.Dispatch<React.SetStateAction<Scores>>; setClosestToPin: React.Dispatch<React.SetStateAction<Record<string, string>>>; setTeamsByDay: React.Dispatch<React.SetStateAction<Record<ScrambleDay, Team[]>>>; setScrambleScores: React.Dispatch<React.SetStateAction<Scores>>; setSkinOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; setScrambleOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; setPostings: React.Dispatch<React.SetStateAction<Partial<Record<RoundKey, RoundPosting>>>>; setPaidEntries: React.Dispatch<React.SetStateAction<Partial<Record<RoundKey, number>>>> }) { const players = state.players?.length ? state.players : startingRoster; const legacyTeams = (state as TournamentState & { teams?: Team[] }).teams; setters.setPlayers(players); setters.setSkinScores(state.skinScores ?? {}); setters.setClosestToPin(state.closestToPin ?? {}); setters.setTeamsByDay(state.teamsByDay ?? { friday: legacyTeams?.length ? legacyTeams : makeTeams(players), saturday: legacyTeams?.length ? legacyTeams : makeTeams(players) }); setters.setScrambleScores(state.scrambleScores ?? {}); setters.setSkinOfficialTotals(state.skinOfficialTotals ?? {}); setters.setScrambleOfficialTotals(state.scrambleOfficialTotals ?? {}); setters.setPostings(state.postings ?? {}); setters.setPaidEntries(state.paidEntries ?? {}); }
+function applyTournamentState(state: TournamentState, setters: { setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; setSkinScores: React.Dispatch<React.SetStateAction<Scores>>; setClosestToPin: React.Dispatch<React.SetStateAction<Record<string, string>>>; setTeamsByDay: React.Dispatch<React.SetStateAction<Record<ScrambleDay, Team[]>>>; setScrambleScores: React.Dispatch<React.SetStateAction<Scores>>; setSkinOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; setScrambleOfficialTotals: React.Dispatch<React.SetStateAction<Record<string, string>>>; setPostings: React.Dispatch<React.SetStateAction<Partial<Record<RoundKey, RoundPosting>>>>; setPaidEntries: React.Dispatch<React.SetStateAction<Partial<Record<RoundKey, number>>>>; setAbsences: React.Dispatch<React.SetStateAction<Partial<Record<RoundKey, string[]>>>> }) { const players = state.players?.length ? state.players : startingRoster; const legacyTeams = (state as TournamentState & { teams?: Team[] }).teams; setters.setPlayers(players); setters.setSkinScores(state.skinScores ?? {}); setters.setClosestToPin(state.closestToPin ?? {}); setters.setTeamsByDay(state.teamsByDay ?? { friday: legacyTeams?.length ? legacyTeams : makeTeams(players), saturday: legacyTeams?.length ? legacyTeams : makeTeams(players) }); setters.setScrambleScores(state.scrambleScores ?? {}); setters.setSkinOfficialTotals(state.skinOfficialTotals ?? {}); setters.setScrambleOfficialTotals(state.scrambleOfficialTotals ?? {}); setters.setPostings(state.postings ?? {}); setters.setPaidEntries(state.paidEntries ?? {}); setters.setAbsences(state.absences ?? {}); }

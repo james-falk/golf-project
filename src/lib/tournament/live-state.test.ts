@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { applyHermesScoringCommand } from "./hermes-command";
-import { isTournamentLocked, makeCleanTournamentState, mergeSiteSave, paidEntriesForRound, teamsCoverRoster } from "./live-state";
-import { calculateScramblePayouts, calculateSkinPayouts, skinRoundPot } from "./rules";
+import { fieldForRound, isTournamentLocked, makeCleanTournamentState, mergeSiteSave, paidEntriesForRound, teamsCoverRoster } from "./live-state";
+import { calculateScramblePayouts, calculateSkinPayouts, calculateSkins, skinRoundPot } from "./rules";
 import { confirmed2026Rules } from "./config";
 import { makeMockTournamentState } from "./mock-state";
-import { makeTeams, startingRoster } from "./seed";
+import { makeTeams, startingRoster, tributeCourse } from "./seed";
 import type { TournamentState } from "./state";
 
 const lockedAt = "2026-08-06T12:00:00.000Z";
@@ -326,5 +326,49 @@ describe("nothing in the ledger is lost on a save", () => {
     const stored = { ...played(), somethingAddedLater: { keep: true } } as unknown as TournamentState;
     const { merged } = mergeSiteSave(stored, played());
     expect((merged as unknown as Record<string, unknown>).somethingAddedLater).toEqual({ keep: true });
+  });
+});
+
+describe("a player who sat a round out", () => {
+  const round = "skins-saturday" as const;
+  const matt = startingRoster.find((p) => p.name === "Matt")!;
+
+  it("drops him from that round's field and nothing else", () => {
+    const state = { absences: { [round]: [matt.id] } } as Partial<TournamentState>;
+    const field = fieldForRound(state, round, startingRoster);
+    expect(field).toHaveLength(21);
+    expect(field.some((p) => p.id === matt.id)).toBe(false);
+    // Every other round still has the whole field.
+    expect(fieldForRound(state, "skins-friday", startingRoster)).toHaveLength(22);
+    expect(fieldForRound(state, "skins-thursday", startingRoster)).toHaveLength(22);
+  });
+
+  it("leaves the round's pot alone, because he paid", () => {
+    const state = { absences: { [round]: [matt.id] } } as Partial<TournamentState>;
+    // The pot follows paid entries, which still defaults to the full roster.
+    expect(skinRoundPot(paidEntriesForRound(state, round, startingRoster.length), confirmed2026Rules.skinRound).total).toBe(440);
+  });
+
+  it("lets a round resolve that a missing card had frozen", () => {
+    const field = startingRoster;
+    const cardFor = (offset: number) => Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1, strokes: 4 + ((i + offset) % 3) }));
+    const scoresAll = Object.fromEntries(field.map((p, i) => [p.id, p.id === matt.id ? [] : cardFor(i)]));
+
+    // With Matt in the field and no card, not one hole resolves.
+    const stuck = calculateSkins(field, tributeCourse, scoresAll, confirmed2026Rules.skinRound);
+    expect(stuck.every((r) => !r.isComplete)).toBe(true);
+
+    // Marking him absent unblocks every hole.
+    const playing = fieldForRound({ absences: { [round]: [matt.id] } }, round, field);
+    const resolved = calculateSkins(playing, tributeCourse, scoresAll, confirmed2026Rules.skinRound);
+    expect(resolved.every((r) => r.isComplete)).toBe(true);
+  });
+
+  it("survives a site save", () => {
+    const current = { ...makeCleanTournamentState(null, lockedAt), absences: { [round]: [matt.id] } } as TournamentState;
+    const stale = { ...current };
+    delete (stale as Partial<TournamentState>).absences;
+    const { merged } = mergeSiteSave(current, stale as TournamentState);
+    expect(merged.absences).toEqual({ [round]: [matt.id] });
   });
 });

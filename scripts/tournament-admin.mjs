@@ -33,6 +33,8 @@ Write (add --yes to apply):
   set-tier <player> <A|B|C|D>             move a player's stroke band
   rename-player <player> <new name>       correct a player's name
   reopen-round <skins|scramble> <day>     return a posted round to review
+  absent <skins|scramble> <day> <player>  record that a player did not play that round
+  present <skins|scramble> <day> <player> undo an absence
   unlock                                  clear the lock so the site can edit again
   lock                                    re-lock the tournament
 
@@ -58,11 +60,20 @@ function resolvePlayer(players, query) {
   throw new Error(`Ambiguous player "${query}": ${partial.map((player) => player.name).join(", ")}`);
 }
 
+function roundKeyFrom(round, day) {
+  const r = normalize(round);
+  const d = normalize(day);
+  if (r !== "skins" && r !== "scramble") throw new Error("Round must be skins or scramble");
+  const allowed = r === "skins" ? skinDays : scrambleDays;
+  if (!allowed.includes(d)) throw new Error(`${r} days are ${allowed.join(", ")}`);
+  return `${r}-${d}`;
+}
+
 function describe(state) {
   const byTier = tiers.map((tier) => `${tier}: ${state.players.filter((player) => player.tier === tier).map((player) => player.name).join(", ") || "—"}`);
   const postings = Object.entries(state.postings ?? {}).map(([key, posting]) => `  ${key}: ${posting.status}${posting.revision ? ` (revision ${posting.revision})` : ""}`);
   const teams = ["friday", "saturday"].map((day) => {
-    const rows = (state.teamsByDay?.[day] ?? []).map((team) => `    ${team.name}: ${team.playerIds.map((id) => state.players.find((player) => player.id === id)?.name ?? id).join(", ")}`);
+    const rows = (state.teamsByDay?.[day] ?? []).map((team) => `    ${team.playerIds.map((id) => state.players.find((player) => player.id === id)?.name ?? id).join(", ")}`);
     return `  ${day}\n${rows.join("\n") || "    —"}`;
   });
 
@@ -75,6 +86,9 @@ function describe(state) {
     "Rounds:",
     ...(postings.length ? postings : ["  none posted"]),
     `Scores stored: ${Object.keys(state.skinScores ?? {}).length} skins cards, ${Object.keys(state.scrambleScores ?? {}).length} scramble cards`,
+    ...(Object.keys(state.absences ?? {}).length
+      ? ["Did not play:", ...Object.entries(state.absences).map(([key, ids]) => `  ${key}: ${ids.map((id) => state.players.find((p) => p.id === id)?.name ?? id).join(", ")}`)]
+      : []),
   ].join("\n");
 }
 
@@ -122,6 +136,25 @@ function apply(state, command, values) {
     return {
       summary: `${key}: posted (revision ${posting.revision}) -> review`,
       next: { ...state, postings: { ...state.postings, [key]: { status: "review", revision: posting.revision } } },
+    };
+  }
+
+  if (command === "absent" || command === "present") {
+    const key = roundKeyFrom(values[0], values[1]);
+    const player = resolvePlayer(state.players, values.slice(2).join(" "));
+    const current = new Set((state.absences ?? {})[key] ?? []);
+    const wasAbsent = current.has(player.id);
+    if (command === "absent" && wasAbsent) throw new Error(`${player.name} is already marked out of ${key}`);
+    if (command === "present" && !wasAbsent) throw new Error(`${player.name} is not marked out of ${key}`);
+    if (command === "absent") current.add(player.id); else current.delete(player.id);
+    const absences = { ...(state.absences ?? {}) };
+    if (current.size) absences[key] = [...current]; else delete absences[key];
+    const playing = state.players.length - current.size;
+    return {
+      summary: command === "absent"
+        ? `${player.name} did not play ${key}. That round is now scored over ${playing} players; its pot is unchanged.`
+        : `${player.name} is back in ${key}. That round is now scored over ${playing} players.`,
+      next: { ...state, absences },
     };
   }
 

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { confirmed2026Rules } from "@/lib/tournament/config";
+import { fieldForRound } from "@/lib/tournament/live-state";
 import { calculatePlayerPayoutBreakdowns } from "@/lib/tournament/payouts";
 import { calculateScramblePayouts, calculateSkinPayouts, calculateSkins, skinRoundPot } from "@/lib/tournament/rules";
 import { tributeCourse } from "@/lib/tournament/seed";
@@ -14,7 +15,7 @@ const skinDays: SkinDay[] = ["thursday", "friday", "saturday"];
 const scrambleDays: ScrambleDay[] = ["friday", "saturday"];
 const cardKey = (day: string, id: string | number) => `${day}:${id}`;
 
-export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay, scrambleTotals, postings, entriesFor, canEdit }: {
+export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay, scrambleTotals, postings, entriesFor, absences, canEdit }: {
   players: Player[];
   skinScores: Scores;
   closestToPin: Record<string, string>;
@@ -22,6 +23,7 @@ export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay,
   scrambleTotals: Record<string, string>;
   postings: Partial<Record<RoundKey, RoundPosting>>;
   entriesFor: (round: RoundKey) => number;
+  absences: Partial<Record<RoundKey, string[]>>;
   canEdit: boolean;
 }) {
   const [scope, setScope] = useState<PayoutScope>("total");
@@ -29,15 +31,17 @@ export function PayoutDashboard({ players, skinScores, closestToPin, teamsByDay,
   const includedScrambleDays = useMemo(() => scope === "total" ? scrambleDays : scope === "thursday" ? [] : [scope], [scope]);
 
   const skinRounds = useMemo(() => includedSkinDays.map((day) => {
-    const scores = Object.fromEntries(players.map((player) => [player.id, skinScores[cardKey(day, player.id)] ?? []]));
-    const results = calculateSkins(players, tributeCourse, scores, confirmed2026Rules.skinRound);
+    // A player who sat the round out is not in its field, or no hole ever resolves.
+    const field = fieldForRound({ absences }, `skins-${day}` as RoundKey, players);
+    const scores = Object.fromEntries(field.map((player) => [player.id, skinScores[cardKey(day, player.id)] ?? []]));
+    const results = calculateSkins(field, tributeCourse, scores, confirmed2026Rules.skinRound);
     return {
       day,
       results,
       payoutByHole: calculateSkinPayouts(entriesFor(`skins-${day}` as RoundKey), results, confirmed2026Rules.skinRound),
       closestToPinWinnerIds: confirmed2026Rules.skinRound.closestToPinHoleNumbers.flatMap((hole) => closestToPin[cardKey(day, hole)] ? [closestToPin[cardKey(day, hole)]] : []),
     };
-  }), [closestToPin, entriesFor, includedSkinDays, players, skinScores]);
+  }), [absences, closestToPin, entriesFor, includedSkinDays, players, skinScores]);
 
   const scrambleRounds = useMemo(() => includedScrambleDays.map((day) => {
     const teams = teamsByDay[day];

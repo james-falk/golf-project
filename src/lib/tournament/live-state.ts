@@ -25,6 +25,20 @@ export const allRoundKeys: RoundKey[] = [
   "scramble-saturday",
 ];
 
+/**
+ * The players actually being scored in a round: the field minus anyone recorded
+ * as absent. The pot is unaffected — an absent player who paid still has money
+ * in it, which is what `paidEntriesForRound` is for.
+ */
+export function fieldForRound(
+  state: Pick<TournamentState, "absences"> | null | undefined,
+  round: RoundKey,
+  players: Player[],
+) {
+  const absent = new Set(state?.absences?.[round] ?? []);
+  return absent.size ? players.filter((player) => !absent.has(player.id)) : players;
+}
+
 /** The stored ledger is authoritative from the moment the commissioner starts the tournament. */
 export function isTournamentLocked(state: Pick<TournamentState, "lockedAt"> | null | undefined) {
   return Boolean(state?.lockedAt);
@@ -136,6 +150,7 @@ export function mergeSiteSave(current: Partial<TournamentState>, incoming: Tourn
     // Paid-entry overrides are set from the backend only, so the stored value
     // always wins over whatever the browser happens to be holding.
     ...(current.paidEntries ? { paidEntries: current.paidEntries } : {}),
+    ...(current.absences ? { absences: current.absences } : {}),
     ...(current.lockedAt ? { lockedAt: current.lockedAt } : {}),
   };
 
