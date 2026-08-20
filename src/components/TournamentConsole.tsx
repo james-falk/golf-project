@@ -434,7 +434,7 @@ function Central({ players, activeScoreDay, setActiveScoreDay, activeRoundType, 
   return <div className="space-y-6">
     {dayNav}
     <section className={`day-pot-summary ${activeScoreDay !== "thursday" ? "has-scramble" : ""}`} aria-label={`${capitalize(activeScoreDay)} prize pool`}>
-      <div><span>{capitalize(activeScoreDay)} pot</span><strong>${dayPot(activeScoreDay)}</strong><small>{activeScoreDay === "thursday" ? "one $460 round" : "two $460 rounds"}</small></div>
+      <div><span>{capitalize(activeScoreDay)} pot</span><strong>${dayPot(activeScoreDay)}</strong><small>{activeScoreDay === "thursday" ? `one $${roundPot} round` : `two $${roundPot} rounds`}</small></div>
       <div><span>Skins round</span><strong>${roundPot}</strong><small>${skinPot.skinsTotal} skins · ${skinPot.closestToPinTotal} CTP</small></div>
       {activeScoreDay !== "thursday" ? <div><span>Scramble round</span><strong>${scramblePot}</strong><small>${scramblePot - confirmed2026Rules.scrambleRound.secondPlacePrize} first · ${confirmed2026Rules.scrambleRound.secondPlacePrize} second</small></div> : null}
     </section>
