@@ -1,6 +1,8 @@
 # East Coast Big Playas — Tournament Central 2026
 
-Local preview and rules engine for the 2026 tournament.
+The 2026 tournament site, now preserved as the permanent record of how it
+finished. Every score and payout is hardcoded; see "The 2026 record is final"
+below.
 
 ## Run locally
 
@@ -48,43 +50,31 @@ The production Vercel project is connected to the `main` branch of
 Pushing a verified commit to `main` deploys it to
 [`eastcoastbigplayas.com`](https://eastcoastbigplayas.com).
 
-A browser draft is kept under `ecbp-2026-scorekeeper-draft-v5`, but it is only
-used when there is no shared database at all. Once Postgres answers, the stored
-ledger is the single source of truth and a stale local draft can never be
-replayed over it.
+## The 2026 record is final
 
-## Tournament lifecycle
+The tournament has been played, and the record is permanent. Every score and
+payout is hardcoded in `src/lib/tournament/final-2026.ts`, copied verbatim from
+the production Neon ledger after the last round was posted on August 10, 2026.
+The site serves that module directly: no database is read or written, so the
+record cannot drift, expire, or depend on external storage.
 
-The board has two states, and the move between them is one-way from the site.
+- The API always returns the frozen state and reports the board as locked.
+- Site saves, lifecycle actions, and Telegram/Hermes scoring commands are all
+  refused; nothing can write.
+- `npm run tournament:admin` still talks to the retired Neon ledger, which the
+  site no longer reads — a change made there will not appear anywhere.
 
-**Not started.** Everything is disposable. Commissioner setup can rearrange the
-roster and both days of teams, and `Load preview data for testing` fills the
-board with throwaway scores so the whole workflow can be rehearsed.
+`src/lib/tournament/final-2026.test.ts` pins the payout table the frozen data
+produces (Lucas won the money at $242, and the full $2,200 pool is accounted
+for). Correcting a proven transcription error means editing `final-2026.ts`,
+updating the pinned table, and letting `npm test` prove the arithmetic still
+adds up.
 
-**Started and locked.** `Start the tournament & lock the field` clears every
-score, keeps the confirmed 23-player roster and the teams as arranged, and marks
-the ledger locked. From that moment:
+## Historical documents
 
-- nothing reseeds or regenerates the board — a page load only ever reads
-- the site cannot change the roster or the teams, and ignores any attempt to
-- a posted round refuses further scores, from the site and from Telegram alike,
-  until the commissioner returns it to review
-- score entry is otherwise unchanged
+These describe how the live 2026 tournament operated, and are kept as history:
 
-Changing a locked tournament is deliberately a backend-only action:
-
-```bash
-npx vercel env pull .env.local
-npm run tournament:admin status
-```
-
-`tournament:admin` can move a stroke band, correct a name, reopen a posted
-round, and unlock or re-lock the tournament. Every write prints the change first
-and does nothing without `--yes`.
-
-## Production direction
-
-- `db/schema.sql` is the starting Postgres model.
-- `docs/PRODUCTION-SETUP.md` describes the intended access roles.
+- `db/schema.sql` was the starting Postgres model.
+- `docs/PRODUCTION-SETUP.md` describes the access roles the live site used.
 - `docs/HERMES-SCORING-AGENT.md` defines the Telegram/Hermes scoring boundary
-  and commissioner override requirements.
+  the live site enforced.

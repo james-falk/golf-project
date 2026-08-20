@@ -1,11 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
-import { neon } from "@neondatabase/serverless";
 import { NextResponse } from "next/server";
-import { applyHermesScoringCommand, type HermesScoringCommand } from "@/lib/tournament/hermes-command";
-import type { TournamentState } from "@/lib/tournament/state";
+import { final2026State, final2026UpdatedAt } from "@/lib/tournament/final-2026";
 
 export const dynamic = "force-dynamic";
-const stateId = "east-coast-big-playas-2026";
 
 function authorized(request: Request) {
   const expected = process.env.HERMES_SCORING_TOKEN;
@@ -16,75 +13,33 @@ function authorized(request: Request) {
   return expectedBytes.length === suppliedBytes.length && timingSafeEqual(expectedBytes, suppliedBytes);
 }
 
-function database() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("Shared storage is not configured");
-  return neon(url);
-}
-
-async function ensureCommandTable(sql: ReturnType<typeof database>) {
-  await sql`CREATE TABLE IF NOT EXISTS hermes_score_commands (
-    idempotency_key text PRIMARY KEY,
-    command jsonb NOT NULL,
-    summary text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now()
-  )`;
-}
-
+/**
+ * The finished tournament, served from the hardcoded record in final-2026.ts.
+ * No database is consulted; see the note there.
+ */
 export async function GET(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  try {
-    const sql = database();
-    const rows = await sql`SELECT payload, updated_at FROM tournament_state WHERE id = ${stateId}`;
-    const state = rows[0]?.payload as TournamentState | undefined;
-    if (!state) return NextResponse.json({ error: "Tournament state is not initialized" }, { status: 404 });
-    // `teamsByDay` is a record of results already reported, not a roster to match
-    // against. Reading an empty list as "no teams loaded" is the obvious wrong
-    // inference, so the response says outright that it is not a blocker.
-    const reported = (day: "friday" | "saturday") => (state.teamsByDay?.[day] ?? []).length;
-    return NextResponse.json({
-      playerCount: state.players.length,
-      scoringDays: ["thursday", "friday", "saturday"],
-      players: state.players.map(({ id, name, tier }) => ({ id, name, tier })),
-      scrambleTeams: {
-        note: "Scramble teams are not arranged in advance and cannot be pre-loaded. A team is created by reporting its result with scramble-total, naming the 3 or 4 players who played together. An empty list below is normal and never blocks scoring.",
-        reportedSoFar: { friday: reported("friday"), saturday: reported("saturday") },
-        friday: state.teamsByDay?.friday ?? [],
-        saturday: state.teamsByDay?.saturday ?? [],
-      },
-      postings: state.postings,
-      updatedAt: rows[0].updated_at,
-    });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to read tournament" }, { status: 500 });
-  }
+  const reported = (day: "friday" | "saturday") => (final2026State.teamsByDay?.[day] ?? []).length;
+  return NextResponse.json({
+    playerCount: final2026State.players.length,
+    scoringDays: ["thursday", "friday", "saturday"],
+    players: final2026State.players.map(({ id, name, tier }) => ({ id, name, tier })),
+    scrambleTeams: {
+      note: "The 2026 tournament is finished. These are the scramble teams exactly as their results were reported; only teams in the money were ever reported at all.",
+      reportedSoFar: { friday: reported("friday"), saturday: reported("saturday") },
+      friday: final2026State.teamsByDay?.friday ?? [],
+      saturday: final2026State.teamsByDay?.saturday ?? [],
+    },
+    postings: final2026State.postings,
+    updatedAt: final2026UpdatedAt,
+  });
 }
 
+/** Scoring closed with the tournament. The record is hardcoded and nothing can write to it. */
 export async function POST(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  try {
-    const body = await request.json() as { idempotencyKey?: string; command?: HermesScoringCommand };
-    if (!body.idempotencyKey || body.idempotencyKey.length > 160) return NextResponse.json({ error: "A valid idempotencyKey is required" }, { status: 400 });
-    if (!body.command) return NextResponse.json({ error: "A command is required" }, { status: 400 });
-
-    const sql = database();
-    await ensureCommandTable(sql);
-    const duplicate = await sql`SELECT summary, created_at FROM hermes_score_commands WHERE idempotency_key = ${body.idempotencyKey}`;
-    if (duplicate[0]) return NextResponse.json({ ok: true, duplicate: true, summary: duplicate[0].summary, committedAt: duplicate[0].created_at });
-
-    const rows = await sql`SELECT payload FROM tournament_state WHERE id = ${stateId}`;
-    const current = rows[0]?.payload as TournamentState | undefined;
-    if (!current) return NextResponse.json({ error: "Tournament state is not initialized" }, { status: 404 });
-    const result = applyHermesScoringCommand(current, body.command);
-
-    const [, updatedRows] = await sql.transaction((tx) => [
-      tx`INSERT INTO hermes_score_commands (idempotency_key, command, summary) VALUES (${body.idempotencyKey}, ${JSON.stringify(body.command)}::jsonb, ${result.summary}) ON CONFLICT (idempotency_key) DO NOTHING`,
-      tx`UPDATE tournament_state SET payload = ${JSON.stringify(result.state)}::jsonb, updated_at = now() WHERE id = ${stateId} RETURNING updated_at`,
-    ]);
-    return NextResponse.json({ ok: true, duplicate: false, summary: result.summary, total: result.total, committedAt: updatedRows[0]?.updated_at });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to apply score command";
-    const status = /required|must|unknown|ambiguous|exactly|there is no/i.test(message) ? 400 : 500;
-    return NextResponse.json({ error: message }, { status });
-  }
+  return NextResponse.json(
+    { error: "The 2026 tournament is finished and preserved as a permanent record. Scoring is closed." },
+    { status: 409 },
+  );
 }

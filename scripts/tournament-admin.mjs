@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Backend administration for a locked tournament.
+ * RETIRED. The 2026 tournament is over and the site now serves the hardcoded
+ * record in src/lib/tournament/final-2026.ts — it no longer reads the Neon
+ * ledger this script writes to. A change made here will not appear anywhere.
+ * The script is kept only to inspect the retired ledger.
+ *
+ * Original purpose: backend administration for a locked tournament.
  *
  * Once the commissioner starts the tournament the site can only enter scores:
  * the roster, the teams and the lock itself are deliberately not editable from

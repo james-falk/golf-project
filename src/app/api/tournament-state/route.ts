@@ -1,141 +1,53 @@
-import { neon } from "@neondatabase/serverless";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { accessCookieName, roleFromToken } from "@/lib/access";
-import { isTournamentLocked, makeCleanTournamentState, mergeSiteSave } from "@/lib/tournament/live-state";
-import { makeMockTournamentState } from "@/lib/tournament/mock-state";
+import { final2026State, final2026UpdatedAt } from "@/lib/tournament/final-2026";
+import { allRoundKeys } from "@/lib/tournament/live-state";
 import { sanitizeTournamentStateForViewer } from "@/lib/tournament/public-state";
-import type { TournamentState } from "@/lib/tournament/state";
 
 export const dynamic = "force-dynamic";
-const stateId = "east-coast-big-playas-2026";
-
-function database() {
-  const url = process.env.DATABASE_URL;
-  if (!url) return null;
-  return neon(url);
-}
-
-async function ensureTable(sql: NonNullable<ReturnType<typeof database>>) {
-  await sql`CREATE TABLE IF NOT EXISTS tournament_state (
-    id text PRIMARY KEY,
-    payload jsonb NOT NULL,
-    updated_at timestamptz NOT NULL DEFAULT now()
-  )`;
-}
-
-async function readState(sql: NonNullable<ReturnType<typeof database>>) {
-  const rows = await sql`SELECT payload, updated_at FROM tournament_state WHERE id = ${stateId}`;
-  return { state: (rows[0]?.payload ?? null) as TournamentState | null, updatedAt: rows[0]?.updated_at ?? null };
-}
-
-async function writeState(sql: NonNullable<ReturnType<typeof database>>, state: TournamentState) {
-  const rows = await sql`INSERT INTO tournament_state (id, payload, updated_at)
-    VALUES (${stateId}, ${JSON.stringify(state)}::jsonb, now())
-    ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = now()
-    RETURNING updated_at`;
-  return rows[0].updated_at;
-}
-
-/** Any real scoring at all — a single card, result or closest-to-pin winner. */
-function hasScores(state: TournamentState | null) {
-  if (!state) return false;
-  return [state.skinScores, state.scrambleScores, state.skinOfficialTotals, state.scrambleOfficialTotals, state.closestToPin]
-    .some((record) => Object.keys(record ?? {}).length > 0);
-}
 
 /**
- * Reads the ledger. This handler never writes: a page load must not be able to
- * change, reseed or overwrite a tournament that is in progress.
+ * The 2026 tournament is over, and the board is its permanent record.
+ *
+ * Every score and payout is hardcoded in final-2026.ts, so this handler reads
+ * no database at all: the record cannot drift, expire, or depend on external
+ * storage. All rounds are posted, which means a viewer sees everything.
  */
 export async function GET() {
   const role = roleFromToken((await cookies()).get(accessCookieName)?.value);
   if (!role) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const sql = database();
-  if (!sql) return NextResponse.json({ state: null, shared: false, locked: false });
-  await ensureTable(sql);
-  const { state, updatedAt } = await readState(sql);
-  const locked = isTournamentLocked(state);
-  if (!state) return NextResponse.json({ state: null, updatedAt, shared: true, locked });
   return NextResponse.json({
-    state: role === "viewer" ? sanitizeTournamentStateForViewer(state) : state,
-    updatedAt,
+    state: role === "viewer" ? sanitizeTournamentStateForViewer(final2026State) : final2026State,
+    updatedAt: final2026UpdatedAt,
     shared: true,
-    locked,
-  });
-}
-
-export async function PUT(request: Request) {
-  const role = roleFromToken((await cookies()).get(accessCookieName)?.value);
-  if (role !== "scorekeeper") return NextResponse.json({ error: "Scorekeeper access required" }, { status: 403 });
-  const incoming = await request.json() as TournamentState;
-  const sql = database();
-  if (!sql) return NextResponse.json({ error: "Shared storage is not configured" }, { status: 503 });
-  await ensureTable(sql);
-  const { state: current } = await readState(sql);
-
-  // A locked tournament ignores any roster or team the browser sends, and refuses
-  // score changes to a round that is already posted.
-  const { merged, rejected } = mergeSiteSave(current ?? {}, incoming);
-  const updatedAt = await writeState(sql, merged);
-  return NextResponse.json({
-    state: merged,
-    updatedAt,
-    shared: true,
-    locked: isTournamentLocked(merged),
-    rejectedRounds: rejected,
+    locked: true,
   });
 }
 
 /**
- * Commissioner lifecycle actions.
- *
- * - `seed-preview` fills the board with throwaway mock scores for testing.
- * - `start-tournament` clears every score, keeps the confirmed roster and the
- *   arranged teams, and locks the ledger. Both refuse to run once locked; from
- *   that point the tournament is only editable from the backend.
+ * A save changes nothing. The response is the permanent record with every
+ * round reported as refused, so a browser holding stale edits converges back
+ * to the truth instead of believing it wrote something.
  */
-export async function POST(request: Request) {
+export async function PUT() {
   const role = roleFromToken((await cookies()).get(accessCookieName)?.value);
   if (role !== "scorekeeper") return NextResponse.json({ error: "Scorekeeper access required" }, { status: 403 });
-  const { action } = await request.json() as { action?: string };
-  const sql = database();
-  if (!sql) return NextResponse.json({ error: "Shared storage is not configured" }, { status: 503 });
-  await ensureTable(sql);
-  const { state: current } = await readState(sql);
+  return NextResponse.json({
+    state: final2026State,
+    updatedAt: final2026UpdatedAt,
+    shared: true,
+    locked: true,
+    rejectedRounds: allRoundKeys,
+  });
+}
 
-  if (isTournamentLocked(current)) {
-    return NextResponse.json(
-      { error: "The tournament is locked. Unlocking is a backend-only action.", locked: true },
-      { status: 409 },
-    );
-  }
-
-  if (action === "seed-preview") {
-    if (hasScores(current)) {
-      return NextResponse.json(
-        { error: "There are scores on the board. Loading preview data would overwrite them." },
-        { status: 409 },
-      );
-    }
-    const state = makeMockTournamentState();
-    const updatedAt = await writeState(sql, state);
-    return NextResponse.json({ state, updatedAt, shared: true, locked: false });
-  }
-
-  if (action === "start-tournament") {
-    // Once real scoring exists, this button would erase it. Clearing a played
-    // round is a deliberate backend action, not one click behind a confirm.
-    if (hasScores(current)) {
-      return NextResponse.json(
-        { error: "There are scores on the board. Clearing a tournament that has been played is a backend-only action." },
-        { status: 409 },
-      );
-    }
-    const state = makeCleanTournamentState(current, new Date().toISOString());
-    const updatedAt = await writeState(sql, state);
-    return NextResponse.json({ state, updatedAt, shared: true, locked: true });
-  }
-
-  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+/** Lifecycle actions ended with the tournament; the record cannot be reseeded or restarted. */
+export async function POST() {
+  const role = roleFromToken((await cookies()).get(accessCookieName)?.value);
+  if (role !== "scorekeeper") return NextResponse.json({ error: "Scorekeeper access required" }, { status: 403 });
+  return NextResponse.json(
+    { error: "The 2026 tournament is finished and preserved as a permanent record. Nothing can change it.", locked: true },
+    { status: 409 },
+  );
 }
